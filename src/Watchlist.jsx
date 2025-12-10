@@ -4,14 +4,26 @@ import { collection, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/fire
 
 export default function Watchlist() {
   const [items, setItems] = useState([]);
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "watchlist"), (snapshot) =>
       setItems(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })))
     );
-
     return () => unsub();
   }, []);
+
+  const filteredItems = items.filter((item) => {
+    if (filter === "all") return true;
+
+    if (filter === "anime") return item.category === "anime";
+
+    if (filter === "movie") return item.type === "movie";
+
+    if (filter === "tv") return item.type === "tv";
+
+    return true;
+  });
 
   const updateSeasons = async (item, newValue) => {
     await updateDoc(doc(db, "watchlist", item.id), {
@@ -36,12 +48,27 @@ export default function Watchlist() {
     <div style={{ padding: 20 }}>
       <h2>Your Watchlist</h2>
 
-      {items.length === 0 && <p>No items in watchlist</p>}
+      <select
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        style={{ marginBottom: 20, padding: 5 }}
+      >
+        <option value="all">All</option>
+        <option value="movie">Movies</option>
+        <option value="tv">TV Shows</option>
+        <option value="anime">Anime</option>
+      </select>
 
-      {items.map((item) => (
+      {filteredItems.map((item) => (
         <div
           key={item.id}
-          style={{ display: "flex", marginBottom: 20, gap: 15 }}
+          style={{
+            display: "flex",
+            marginBottom: 20,
+            gap: 15,
+            borderBottom: "1px solid #ddd",
+            paddingBottom: 15,
+          }}
         >
           {item.poster ? (
             <img
@@ -56,6 +83,8 @@ export default function Watchlist() {
           <div>
             <strong>{item.title}</strong> <br />
             Rating: {item.rating} <br />
+            Type: {item.type === "movie" ? "Movie" : "TV Show"} <br />
+            Category: {item.category || "normal"} <br />
             Status: {item.status} <br />
 
             {item.type === "tv" && (
