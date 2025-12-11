@@ -8,24 +8,16 @@ import BulkAdd from "./BulkAdd";
 export default function App() {
   return (
     <BrowserRouter>
-      <nav
-        style={{
-          padding: "10px",
-          background: "#222",
-          color: "#fff",
-          display: "flex",
-          gap: "20px",
-        }}
-      >
-        <Link to="/bulk-add" style={{ marginRight: 15 }}>
-          Bulk Add
-        </Link>
-        <Link to="/" style={{ marginRight: 15 }}>
-          Search
-        </Link>
-        <Link to="/watchlist" style={{ marginRight: 15 }}>
-          Watchlist
-        </Link>
+      <nav style={{
+        padding: "10px",
+        background: "#222",
+        color: "#fff",
+        display: "flex",
+        gap: "20px"
+      }}>
+        <Link to="/bulk-add">Bulk Add</Link>
+        <Link to="/">Search</Link>
+        <Link to="/watchlist">Watchlist</Link>
         <Link to="/watched">Watched</Link>
       </nav>
 
@@ -38,10 +30,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-
-// ideas
-// improve layout
-// add options ot sort
-// search will autocomplete
-// maybe accounts
-// Put in alot of info it will spit out everything

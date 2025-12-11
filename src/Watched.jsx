@@ -13,14 +13,17 @@ export default function Watched() {
     return () => unsub();
   }, []);
 
-  // ----------------------------
-  // FILTER SYSTEM (same as Watchlist)
-  // ----------------------------
+
   const filteredItems = items.filter((item) => {
     if (filter === "all") return true;
-    if (filter === "anime") return item.category === "anime";
-    if (filter === "movie") return item.type === "movie";
-    if (filter === "tv") return item.type === "tv";
+
+    const type = item.type?.toLowerCase() || "";
+    const category = item.category?.toLowerCase() || "";
+
+    if (filter === "anime") return type === "anime";
+    if (filter === "movie") return type === "movie";
+    if (filter === "tv") return type === "tv";
+
     return true;
   });
 
@@ -32,7 +35,6 @@ export default function Watched() {
     <div style={{ padding: 20 }}>
       <h2>Completed Shows / Movies</h2>
 
-      {/* Filter Dropdown */}
       <select
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
@@ -59,7 +61,7 @@ export default function Watched() {
             borderBottom: "1px solid #ddd",
           }}
         >
-          {/* Poster */}
+    
           {item.poster ? (
             <img
               src={`https://image.tmdb.org/t/p/w200${item.poster}`}
@@ -77,7 +79,7 @@ export default function Watched() {
             />
           )}
 
-          {/* Info */}
+       
           <div>
             <strong>{item.title}</strong> <br />
             Rating: {item.rating} <br />
@@ -89,7 +91,7 @@ export default function Watched() {
               : "Unknown"}
             <br />
 
-            {/* Only for TV shows */}
+       
             {item.type === "tv" && (
               <>
                 Seasons Watched: {item.seasonsWatched} / {item.totalSeasons}
@@ -106,3 +108,5 @@ export default function Watched() {
     </div>
   );
 }
+
+//dark theme?

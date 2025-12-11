@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { db } from "./firebase";
-import { collection, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc } from "firebase/firestore";
 
 export default function Watchlist() {
   const [items, setItems] = useState([]);
@@ -14,16 +14,18 @@ export default function Watchlist() {
   }, []);
 
   const filteredItems = items.filter((item) => {
-    if (filter === "all") return true;
 
-    if (filter === "anime") return item.category === "anime";
+  if (filter === "all") return true;
 
-    if (filter === "movie") return item.type === "movie";
+  const type = item.type?.toLowerCase() || "";
+  const category = item.category?.toLowerCase() || "";
 
-    if (filter === "tv") return item.type === "tv";
+  if (filter === "movie") return type === "movie";
+  if (filter === "tv") return type === "tv";
+  if (filter === "anime") return category === "anime";
 
-    return true;
-  });
+  return true;
+});
 
   const updateSeasons = async (item, newValue) => {
     await updateDoc(doc(db, "watchlist", item.id), {
@@ -34,11 +36,21 @@ export default function Watchlist() {
   };
 
   const markCompleted = async (item) => {
-    await updateDoc(doc(db, "watchlist", item.id), {
-      status: "completed",
-      finishedAt: Date.now(),
-    });
-  };
+    try {
+      await addDoc(collection(db, "watched"), {
+        ...item,
+        type: item.type || "movie",
+        category: item.category || "normal",
+        status: "completed",
+        finishedAt: Date.now(),
+      });
+
+      await deleteDoc(doc(db, "watchlist", item.id));
+    } catch (err) {
+      console.error("Error mocing item:", err);
+    }
+    };
+
 
   const removeFromWatchlist = async (item) => {
     await deleteDoc(doc(db, "watchlist", item.id));
