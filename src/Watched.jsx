@@ -8,7 +8,6 @@ export default function Watched() {
   const [filter, setFilter] = useState("all");
   const { theme, toggleTheme } = useContext(ThemeContext);
 
-  // Fetch watched items
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "watched"), (snapshot) => {
       setItems(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
@@ -16,7 +15,6 @@ export default function Watched() {
     return () => unsub();
   }, []);
 
-  // Filter items based on dropdown
   const filteredItems = items.filter((item) => {
     if (filter === "all") return true;
     const type = item.type?.toLowerCase();
@@ -32,7 +30,6 @@ export default function Watched() {
     await deleteDoc(doc(db, "watched", item.id));
   };
 
-  // Dynamic styles based on theme
   const styles = {
     page: {
       padding: 20,
