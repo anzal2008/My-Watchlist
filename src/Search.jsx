@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { db } from "./firebase";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
 import { useSearchParams } from "react-router-dom";
 
 export default function Search() {
@@ -20,7 +20,7 @@ export default function Search() {
         query
       )}`;
 
-      try {
+      try {``
         const res = await fetch(url);
         const data = await res.json();
         setResults(data.results || []);
@@ -37,7 +37,13 @@ export default function Search() {
   );
 
   const addToWatchlist = async (item) => {
-    await addDoc(collection(db, "watchlist"), {
+    const ref = doc(db, "watchlist", String(item.id));
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      alert("Already in watchlist");
+      return;
+    }
+    await setDoc(ref, {
       tmdbId: item.id,
       title: item.title || item.name,
       type: item.media_type,
@@ -48,10 +54,19 @@ export default function Search() {
       status: "not started",
       lastChecked: Date.now(),
     });
+
+    alert(`Added "${item.title || item.name}" to watchlist`)
   };
 
   const markAsWatched = async (item) => {
-    await addDoc(collection(db, "watched"), {
+    const ref = doc(db, "watched", String(item.id));
+    const snap = await getDoc(ref);
+
+    if (snap.exists()) {
+      alert("Already marked as Watched")
+      return;
+    }
+    await setDoc(ref, {
       tmdbId: item.id,
       title: item.title || item.name,
       type: item.media_type,
@@ -60,6 +75,9 @@ export default function Search() {
       status: "completed",
       finishedAt: Date.now(),
     });
+    await deleteDoc(doc(db, "watchlist", String(item.id)));
+
+    alert(`Marked "${item.title || item.name}" as watched`);
   };
 
   return (

@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useContext } from "react";
 import { ThemeContext } from "./ThemeContext";
 import { db } from "./firebase";
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc,} from"firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, setDoc} from"firebase/firestore";
 
 
 export default function Watchlist() {
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState("all");
-  const { theme, toggleTheme } = useContext(ThemeContext);
+  const { theme } = useContext(ThemeContext);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "watchlist"), (snapshot) => {
@@ -33,16 +33,20 @@ export default function Watchlist() {
   };
 
   const markCompleted = async (item) => {
-    try {
-      await addDoc(collection(db, "watched"), {
-        ...item,
-        status: "completed",
-        finishedAt: Date.now(),
-      });
-      await deleteDoc(doc(db, "watchlist", item.id));
-    } catch (err) {
-      console.error("Move error:", err);
-    }
+    const tmdbId = String(item.tmdbId || item.id);
+    const watchedRef = doc(db, "watched", tmdbId);
+    
+    await setDoc(watchedRef, {
+      tmdbId,
+      title: item.title,
+      type: item.type,
+      poster: item.poster,
+      rating: item.rating,
+      category: item.category || "normal",
+      status: "completed",
+      finishedAt: Date.now(),
+    });
+    await deleteDoc(doc(db, "watchlist", item.id))
   };
 
   const removeItem = async (item) => {
@@ -61,14 +65,6 @@ export default function Watchlist() {
       alignItems: "center",
       justifyContent: "space-between",
       marginBottom: 20,
-    },
-    toggleButton: {
-      padding: "6px 12px",
-      cursor: "pointer",
-      borderRadius: 6,
-      border: "none",
-      background: theme === "dark" ? "#fff" : "#111",
-      color: theme === "dark" ? "#111" : "#fff",
     },
     select: {
       marginBottom: 20,
@@ -135,9 +131,6 @@ export default function Watchlist() {
     <div style={styles.page}>
       <div style={styles.header}>
         <h2>Your Watchlist</h2>
-        <button style={styles.toggleButton} onClick={toggleTheme}>
-          {theme === "dark" ? "☀ Light Mode" : "🌙 Dark Mode"}
-        </button>
       </div>
 
       <select

@@ -6,7 +6,7 @@ import { collection, onSnapshot, doc, deleteDoc } from "firebase/firestore";
 export default function Watched() {
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState("all");
-  const { theme, toggleTheme } = useContext(ThemeContext);
+  const { theme } = useContext(ThemeContext);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "watched"), (snapshot) => {
@@ -38,18 +38,7 @@ export default function Watched() {
       color: theme === "dark" ? "white" : "black",
     },
     header: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
       marginBottom: 20,
-    },
-    toggleButton: {
-      padding: "6px 12px",
-      cursor: "pointer",
-      borderRadius: 6,
-      border: "none",
-      background: theme === "dark" ? "#fff" : "#111",
-      color: theme === "dark" ? "#111" : "#fff",
     },
     select: {
       marginBottom: 20,
@@ -68,7 +57,6 @@ export default function Watched() {
       background: theme === "dark" ? "#111" : "#fff",
       borderRadius: 10,
       padding: 10,
-      flexShrink: 0,
       transition: "transform 0.2s ease",
       color: theme === "dark" ? "white" : "black",
     },
@@ -98,9 +86,6 @@ export default function Watched() {
     <div style={styles.page}>
       <div style={styles.header}>
         <h2>Watched Shows / Movies</h2>
-        <button style={styles.toggleButton} onClick={toggleTheme}>
-          {theme === "dark" ? "☀ Light Mode" : "🌙 Dark Mode"}
-        </button>
       </div>
 
       <select
@@ -119,8 +104,12 @@ export default function Watched() {
           <div
             key={item.id}
             style={styles.card}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.transform = "scale(1.05)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.transform = "scale(1)")
+            }
           >
             {item.poster ? (
               <img
@@ -138,10 +127,11 @@ export default function Watched() {
             <br />
             Type: {item.type === "movie" ? "Movie" : "TV Show"}
             <br />
-            Category: {item.category || "normal"}
-            <br />
 
-            <button onClick={() => removeWatched(item)} style={styles.remove}>
+            <button
+              onClick={() => removeWatched(item)}
+              style={styles.remove}
+            >
               ❌ Remove
             </button>
           </div>

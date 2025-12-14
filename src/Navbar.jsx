@@ -1,63 +1,111 @@
-import React, { useState, useContext } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useEffect, useState, useContext } from "react";
 import { ThemeContext } from "./ThemeContext";
+import { useNavigate } from "react-router-dom";
 
-export default function Navbar() {
+const TMDB_KEY = "3f3a43be23e6ffc9e3acb7fd43f7eea7";
+
+export default function NavBar() {
   const { theme, toggleTheme } = useContext(ThemeContext);
   const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
   const navigate = useNavigate();
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (!query.trim()) return;
-    navigate(`/search?q=${encodeURIComponent(query)}`);
+  useEffect(() => {
+    if (!query.trim()) {
+      setSuggestions([]);
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${query}`
+        );
+        const data = await res.json();
+
+        setSuggestions(
+          data.results
+            ?.filter((r) => r.media_type !== "person")
+            .slice(0, 7)
+        );
+      } catch (err) {
+        console.error(err);
+      }
+    }, 350); 
+
+    return () => clearTimeout(timeout);
+  }, [query]);
+
+  const selectSuggestion = (item) => {
     setQuery("");
+    setSuggestions([]);
+    navigate("/"); 
+    window.dispatchEvent(
+      new CustomEvent("search-selected", { detail: item })
+    );
   };
 
   return (
     <nav
       style={{
-        padding: "10px 20px",
-        background: theme === "dark" ? "#141414" : "#f2f2f2",
-        color: theme === "dark" ? "#fff" : "#000",
         display: "flex",
-        alignItems: "center",
         justifyContent: "space-between",
+        padding: "10px 20px",
+        background: theme === "dark" ? "#111" : "#fff",
+        color: theme === "dark" ? "white" : "black",
+        position: "relative",
       }}
     >
-      <div style={{ display: "flex", gap: 20 }}>
-        <Link to="/watchlist">Watchlist</Link>
-        <Link to="/watched">Watched</Link>
-        <Link to="/bulk-add">Bulk Add</Link>
-      </div>
+      <strong>🎬 WatchApp</strong>
 
-      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        <form onSubmit={handleSearch}>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search movies or TV..."
-            style={{
-              padding: "6px 10px",
-              borderRadius: 6,
-              border: "none",
-              outline: "none",
-            }}
-          />
-        </form>
-
-        <button
-          onClick={toggleTheme}
+      <div style={{ position: "relative", width: 300 }}>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search movies, TV, anime..."
           style={{
-            padding: "6px 10px",
+            width: "100%",
+            padding: 8,
             borderRadius: 6,
-            border: "none",
-            cursor: "pointer",
+            border: "1px solid #999",
           }}
-        >
-          {theme === "dark" ? "☀️" : "🌙"}
-        </button>
+        />
+
+        {suggestions.length > 0 && (
+          <div
+            style={{
+              position: "absolute",
+              top: "110%",
+              width: "100%",
+              background: theme === "dark" ? "#222" : "#fff",
+              borderRadius: 6,
+              boxShadow: "0 5px 20px rgba(0,0,0,0.2)",
+              zIndex: 20,
+            }}
+          >
+            {suggestions.map((s) => (
+              <div
+                key={s.id}
+                onClick={() => selectSuggestion(s)}
+                style={{
+                  padding: 8,
+                  cursor: "pointer",
+                  borderBottom: "1px solid #444",
+                }}
+              >
+                <strong>{s.title || s.name}</strong>{" "}
+                <span style={{ opacity: 0.6 }}>
+                  ({s.media_type === "tv" ? "TV" : "Movie"})
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      <button onClick={toggleTheme}>
+        {theme === "dark" ? "☀" : "🌙"}
+      </button>
     </nav>
   );
 }
