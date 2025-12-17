@@ -19,30 +19,39 @@ export default function NavBar() {
     const timeout = setTimeout(async () => {
       try {
         const res = await fetch(
-          `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${query}`
+          `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(
+            query
+          )}`
         );
         const data = await res.json();
 
         setSuggestions(
-          data.results
-            ?.filter((r) => r.media_type !== "person")
+          (data.results || [])
+            .filter((r) => r.media_type !== "person")
+            .sort((a, b) => b.vote_average - a.vote_average) // ⭐ highest first
             .slice(0, 7)
         );
       } catch (err) {
         console.error(err);
       }
-    }, 350); 
+    }, 350);
 
     return () => clearTimeout(timeout);
   }, [query]);
 
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+
+    navigate(`/search?q=${encodeURIComponent(query)}`);
+    setSuggestions([]);
+  };
+
   const selectSuggestion = (item) => {
+    const name = item.title || item.name;
     setQuery("");
     setSuggestions([]);
-    navigate("/"); 
-    window.dispatchEvent(
-      new CustomEvent("search-selected", { detail: item })
-    );
+    navigate(`/search?q=${encodeURIComponent(name)}`);
   };
 
   return (
@@ -56,9 +65,12 @@ export default function NavBar() {
         position: "relative",
       }}
     >
-      <strong>🎬 WatchApp</strong>
+      <strong style={{ cursor: "pointer" }} onClick={() => navigate("/")}>
+        🎬 WatchApp
+      </strong>
 
-      <div style={{ position: "relative", width: 300 }}>
+      {/* SEARCH */}
+      <form onSubmit={handleSearch} style={{ position: "relative", width: 300 }}>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -95,17 +107,23 @@ export default function NavBar() {
               >
                 <strong>{s.title || s.name}</strong>{" "}
                 <span style={{ opacity: 0.6 }}>
-                  ({s.media_type === "tv" ? "TV" : "Movie"})
+                  ({s.media_type === "tv" ? "TV" : "Movie"}) ⭐{" "}
+                  {s.vote_average.toFixed(1)}
                 </span>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </form>
 
-      <button onClick={toggleTheme}>
-        {theme === "dark" ? "☀" : "🌙"}
-      </button>
+      {/* ACTIONS */}
+      <div style={{ display: "flex", gap: 10 }}>
+        <button onClick={() => navigate("/bulk-add")}>➕ Bulk Add</button>
+        <button onClick={() => navigate("/watched")}>✔ Watched</button>
+        <button onClick={toggleTheme}>
+          {theme === "dark" ? "☀" : "🌙"}
+        </button>
+      </div>
     </nav>
   );
 }

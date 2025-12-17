@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { db } from "./firebase";
-import { collection, doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
 import { useSearchParams } from "react-router-dom";
 
 export default function Search() {
@@ -20,7 +20,7 @@ export default function Search() {
         query
       )}`;
 
-      try {``
+      try {
         const res = await fetch(url);
         const data = await res.json();
         setResults(data.results || []);
@@ -32,17 +32,27 @@ export default function Search() {
     fetchResults();
   }, [query]);
 
-  const filteredResults = results.filter(
-    (item) => item.media_type === "movie" || item.media_type === "tv"
-  );
+  const filteredResults = results
+    .filter(
+      (item) =>
+        (item.media_type === "movie" || item.media_type === "tv") &&
+        item.vote_average > 0
+    )
+    .sort(
+      (a, b) =>
+        b.vote_average * b.popularity -
+        a.vote_average * a.popularity
+    );
 
   const addToWatchlist = async (item) => {
     const ref = doc(db, "watchlist", String(item.id));
     const snap = await getDoc(ref);
+
     if (snap.exists()) {
       alert("Already in watchlist");
       return;
     }
+
     await setDoc(ref, {
       tmdbId: item.id,
       title: item.title || item.name,
@@ -55,7 +65,7 @@ export default function Search() {
       lastChecked: Date.now(),
     });
 
-    alert(`Added "${item.title || item.name}" to watchlist`)
+    alert(`Added "${item.title || item.name}" to watchlist`);
   };
 
   const markAsWatched = async (item) => {
@@ -63,9 +73,10 @@ export default function Search() {
     const snap = await getDoc(ref);
 
     if (snap.exists()) {
-      alert("Already marked as Watched")
+      alert("Already marked as watched");
       return;
     }
+
     await setDoc(ref, {
       tmdbId: item.id,
       title: item.title || item.name,
@@ -75,6 +86,7 @@ export default function Search() {
       status: "completed",
       finishedAt: Date.now(),
     });
+
     await deleteDoc(doc(db, "watchlist", String(item.id)));
 
     alert(`Marked "${item.title || item.name}" as watched`);
@@ -91,7 +103,7 @@ export default function Search() {
           gap: 20,
         }}
       >
-        {filteredResults.map((item) => (
+        {filteredResults.map((item, index) => (
           <div
             key={item.id}
             style={{
@@ -101,22 +113,45 @@ export default function Search() {
               borderRadius: 10,
             }}
           >
-            {item.poster_path && (
+            {/* ⭐ TOP MATCH */}
+            {index === 0 && (
+              <div
+                style={{
+                  background: "gold",
+                  color: "black",
+                  fontSize: 12,
+                  padding: "2px 6px",
+                  borderRadius: 6,
+                  marginBottom: 6,
+                  width: "fit-content",
+                }}
+              >
+                ⭐ Top Match
+              </div>
+            )}
+
+            {item.poster_path ? (
               <img
                 src={`https://image.tmdb.org/t/p/w300${item.poster_path}`}
                 alt={item.title || item.name}
                 style={{ width: "100%", borderRadius: 8 }}
               />
-            )}
+            ) : null}
 
             <strong>{item.title || item.name}</strong>
             <div>⭐ {item.vote_average}</div>
 
-            <button onClick={() => addToWatchlist(item)}>➕ Watchlist</button>
-            <button onClick={() => markAsWatched(item)}>✔ Watched</button>
+            <button onClick={() => addToWatchlist(item)}>
+              ➕ Watchlist
+            </button>
+            <button onClick={() => markAsWatched(item)}>
+              ✔ Watched
+            </button>
           </div>
         ))}
       </div>
     </div>
   );
 }
+
+//fix bugs 

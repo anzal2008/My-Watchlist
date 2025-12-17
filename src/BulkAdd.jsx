@@ -1,10 +1,11 @@
-// src/BulkAdd.jsx
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
+import { ThemeContext } from "./ThemeContext";
 import { db } from "./firebase";
 import { collection, addDoc } from "firebase/firestore";
 
 export default function BulkAdd() {
   const [input, setInput] = useState("");
+  const {theme} = useContext(ThemeContext);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const apiKey = "3f3a43be23e6ffc9e3acb7fd43f7eea7"; 
@@ -17,7 +18,6 @@ export default function BulkAdd() {
       .replace(/\s+/g, " ")
       .trim();
   }
-//fix 
   function levenshtein(a = "", b = "") {
     a = a || "";
     b = b || "";
@@ -48,6 +48,33 @@ export default function BulkAdd() {
     return d / L;
   }
 
+  const styles ={
+    page: {
+      minHeight: "100vh",
+      padding: 20,
+      background: theme === "dark" ? "#000" : "#f0f0f0",
+      color: theme === "dark" ? "white" : "black",
+    },
+    textarea: {
+      width: "100%",
+      height: 150,
+      background: theme === "dark" ? "#111" : "#fff",
+      color: theme === "dark" ? "white" : "black",
+      border: "1px solid #999",
+      borderRadius: 6,
+      padding: 10,
+    },
+    button: {
+      marginTop: 10,
+      padding: "9px 12px",
+      borderRadius: 6,
+      border: "none",
+      cursor: "pointer",
+      background: theme === "dark" ? "#fff" : "#111",
+      color: theme === "dark" ? "#111" : "#fff",
+    }
+  };
+  
   async function tmdbSearch(query) {
     const q = encodeURIComponent(query);
     const endpoints = [
@@ -275,8 +302,8 @@ export default function BulkAdd() {
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>Bulk And</h2>
+    <div style={styles.page}>
+      <h2>Bulk Add</h2>
 
       <p>Paste titles(may take a while)</p>
 
@@ -285,7 +312,7 @@ export default function BulkAdd() {
         onChange={(e) => setInput(e.target.value)}
         placeholder="Paste a paragraph or list of titles..."
         rows={8}
-        style={{ width: "100%", padding: 10, fontSize: 15 }}
+        style={styles.textarea}
       />
 
       <div style={{ marginTop: 8 }}>
