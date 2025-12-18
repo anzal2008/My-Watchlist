@@ -19,5 +19,8 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firestore
 export const db = getFirestore(app);
 
+//password with google
+export const auth = getAuth(app);
+
 // Initialize Analytics (optional)
 export const analytics = getAnalytics(app);

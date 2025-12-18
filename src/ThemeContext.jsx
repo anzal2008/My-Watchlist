@@ -16,6 +16,14 @@ export const ThemeProvider = ({ children }) => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
+  useEffect(() => {
+    document.body.style.backgroundColor =
+      theme === "dark" ? "#0f0f0f" : "#f5f5f5";
+    document.body.style.color =
+      theme === "dark" ? "#0f0f0f" : "#f5f5f5";
+
+  }, [theme]);
+
   const toggleTheme = () => {
     setTheme(theme === "light" ? "dark" : "light");
   };

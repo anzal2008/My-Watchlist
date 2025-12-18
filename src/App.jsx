@@ -7,6 +7,10 @@ import Watched from "./Watched";
 import BulkAdd from "./BulkAdd";
 import NavBar from "./Navbar";
 import { ThemeProvider } from "./ThemeContext";
+import {useAuth} from "./Authcontext";
+import ProtectedRoute from "./Protectedroute";
+import Login from "./login";
+import Signup from "./Signup"
 
 export default function App() {
   return (
@@ -15,13 +19,46 @@ export default function App() {
         <NavBar />
 
         <Routes>
-          {/* Default → Watchlist */}
-          <Route path="/" element={<Navigate to="/watchlist" />} />
+          <Route path="login" element={<login />} />
+          <Route path="/signup" element={<Signup />} />
 
-          <Route path="/watchlist" element={<Watchlist />} />
-          <Route path="/watched" element={<Watched />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/bulk-add" element={<BulkAdd />} />
+          <Route
+            Path="/"
+            element={
+              <ProtectedRoute>
+                <Navigate to= "/watchlist" />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/watched"
+            element={
+              <ProtectedRoute>
+                <Watched />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/search"
+            element={
+              <ProtectedRoute>
+                <Search />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route 
+            path="/bulk-add"
+            element={
+              <ProtectedRoute>
+                <BulkAdd />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" />} />
+
         </Routes>
       </BrowserRouter>
     </ThemeProvider>

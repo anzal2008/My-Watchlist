@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { db } from "./firebase";
 import { doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
 import { useSearchParams } from "react-router-dom";
+import {usecontext} from "react";
+import { ThemeContext } from "./ThemeContext";
 
 export default function Search() {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q");
-
+  const {theme} = useContext(ThemeContext);
   const [results, setResults] = useState([]);
   const [seasonsWatched, setSeasonsWatched] = useState({});
 
@@ -31,6 +33,27 @@ export default function Search() {
 
     fetchResults();
   }, [query]);
+
+  const pageStyle = {
+    padding: 20,
+    backgroundColor: theme=== "dark" ? "#0f0f0f" : "#f5f5f5",
+    color: theme === "dark" ? "white" : "#111",
+    minHeight: "100vh,"
+  };
+
+  const cardStyle = {
+    backgroundColor: theme === "dark" ? "#111" : "white",
+    color: theme === "dark" ? "white" : "#111",
+    padding: 10,
+    borderRadius: 10,
+  };
+
+  const buttonStyle = {
+    width: "100%",
+    marginTop: 6, 
+    padding: "6px 0",
+    cursor: "pointer",
+  };
 
   const filteredResults = results
     .filter(
@@ -93,7 +116,7 @@ export default function Search() {
   };
 
   return (
-    <div style={{ padding: 20 }}>
+    <div style={{ pageStyle }}>
       <h2>Results for “{query}”</h2>
 
       <div
@@ -104,16 +127,7 @@ export default function Search() {
         }}
       >
         {filteredResults.map((item, index) => (
-          <div
-            key={item.id}
-            style={{
-              background: "#111",
-              color: "white",
-              padding: 10,
-              borderRadius: 10,
-            }}
-          >
-            {/* ⭐ TOP MATCH */}
+          <div style = {cardStyle}>
             {index === 0 && (
               <div
                 style={{
@@ -141,10 +155,10 @@ export default function Search() {
             <strong>{item.title || item.name}</strong>
             <div>⭐ {item.vote_average}</div>
 
-            <button onClick={() => addToWatchlist(item)}>
+            <button style={buttonStyle} onClick={() => addToWatchlist(item)}>
               ➕ Watchlist
             </button>
-            <button onClick={() => markAsWatched(item)}>
+            <button style={buttonStyle} onClick={() => markAsWatched(item)}>
               ✔ Watched
             </button>
           </div>
