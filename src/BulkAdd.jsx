@@ -382,3 +382,4 @@ export default function BulkAdd() {
     </div>
   );
 }
+//improve in longer text

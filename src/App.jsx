@@ -1,3 +1,4 @@
+// App.jsx
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
@@ -6,11 +7,12 @@ import Watchlist from "./Watchlist";
 import Watched from "./Watched";
 import BulkAdd from "./BulkAdd";
 import NavBar from "./Navbar";
+
 import { ThemeProvider } from "./ThemeContext";
-import {useAuth} from "./Authcontext";
-import ProtectedRoute from "./Protectedroute";
-import Login from "./login";
-import Signup from "./Signup"
+import { useAuth } from "./AuthContext";
+import ProtectedRoute from "./ProtectedRoute";
+import Login from "./Login";
+import Signup from "./Signup";
 
 export default function App() {
   return (
@@ -19,19 +21,28 @@ export default function App() {
         <NavBar />
 
         <Routes>
-          <Route path="login" element={<login />} />
+          {/* Public routes */}
+          <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
 
+          {/* Protected routes */}
           <Route
-            Path="/"
+            path="/"
             element={
               <ProtectedRoute>
-                <Navigate to= "/watchlist" />
+                <Navigate to="/watchlist" />
               </ProtectedRoute>
             }
           />
-
-          <Route 
+          <Route
+            path="/watchlist"
+            element={
+              <ProtectedRoute>
+                <Watchlist />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/watched"
             element={
               <ProtectedRoute>
@@ -39,8 +50,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
-          <Route 
+          <Route
             path="/search"
             element={
               <ProtectedRoute>
@@ -48,8 +58,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
-          <Route 
+          <Route
             path="/bulk-add"
             element={
               <ProtectedRoute>
@@ -57,8 +66,9 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="*" element={<Navigate to="/" />} />
 
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>

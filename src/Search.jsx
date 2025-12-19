@@ -1,28 +1,29 @@
+// src/Search.jsx
 import React, { useContext, useEffect, useState } from "react";
 import { db } from "./firebase";
 import { doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
 import { useSearchParams } from "react-router-dom";
-import {usecontext} from "react";
 import { ThemeContext } from "./ThemeContext";
+import { useAuth } from "./AuthContext";
 
 export default function Search() {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q");
-  const {theme} = useContext(ThemeContext);
+  const { theme } = useContext(ThemeContext);
+  const { currentUser } = useAuth();
   const [results, setResults] = useState([]);
   const [seasonsWatched, setSeasonsWatched] = useState({});
+
+  const apiKey = "3f3a43be23e6ffc9e3acb7fd43f7eea7";
 
   useEffect(() => {
     if (!query) return;
 
     const fetchResults = async () => {
-      const apiKey = "3f3a43be23e6ffc9e3acb7fd43f7eea7";
-
-      const url = `https://api.themoviedb.org/3/search/multi?api_key=${apiKey}&query=${encodeURIComponent(
-        query
-      )}`;
-
       try {
+        const url = `https://api.themoviedb.org/3/search/multi?api_key=${apiKey}&query=${encodeURIComponent(
+          query
+        )}`;
         const res = await fetch(url);
         const data = await res.json();
         setResults(data.results || []);
@@ -36,9 +37,9 @@ export default function Search() {
 
   const pageStyle = {
     padding: 20,
-    backgroundColor: theme=== "dark" ? "#0f0f0f" : "#f5f5f5",
+    backgroundColor: theme === "dark" ? "#0f0f0f" : "#f5f5f5",
     color: theme === "dark" ? "white" : "#111",
-    minHeight: "100vh,"
+    minHeight: "100vh",
   };
 
   const cardStyle = {
@@ -50,7 +51,7 @@ export default function Search() {
 
   const buttonStyle = {
     width: "100%",
-    marginTop: 6, 
+    marginTop: 6,
     padding: "6px 0",
     cursor: "pointer",
   };
@@ -63,12 +64,13 @@ export default function Search() {
     )
     .sort(
       (a, b) =>
-        b.vote_average * b.popularity -
-        a.vote_average * a.popularity
+        b.vote_average * b.popularity - a.vote_average * a.popularity
     );
 
   const addToWatchlist = async (item) => {
-    const ref = doc(db, "watchlist", String(item.id));
+    if (!currentUser) return alert("You must be logged in");
+
+    const ref = doc(db, "watchlist", `${currentUser.uid}_${item.id}`);
     const snap = await getDoc(ref);
 
     if (snap.exists()) {
@@ -86,13 +88,16 @@ export default function Search() {
       totalSeasons: 1,
       status: "not started",
       lastChecked: Date.now(),
+      uid: currentUser.uid,
     });
 
     alert(`Added "${item.title || item.name}" to watchlist`);
   };
 
   const markAsWatched = async (item) => {
-    const ref = doc(db, "watched", String(item.id));
+    if (!currentUser) return alert("You must be logged in");
+
+    const ref = doc(db, "watched", `${currentUser.uid}_${item.id}`);
     const snap = await getDoc(ref);
 
     if (snap.exists()) {
@@ -108,15 +113,16 @@ export default function Search() {
       rating: item.vote_average,
       status: "completed",
       finishedAt: Date.now(),
+      uid: currentUser.uid,
     });
 
-    await deleteDoc(doc(db, "watchlist", String(item.id)));
+    await deleteDoc(doc(db, "watchlist", `${currentUser.uid}_${item.id}`));
 
     alert(`Marked "${item.title || item.name}" as watched`);
   };
 
   return (
-    <div style={{ pageStyle }}>
+    <div style={pageStyle}>
       <h2>Results for “{query}”</h2>
 
       <div
@@ -127,7 +133,7 @@ export default function Search() {
         }}
       >
         {filteredResults.map((item, index) => (
-          <div style = {cardStyle}>
+          <div key={item.id || index} style={cardStyle}>
             {index === 0 && (
               <div
                 style={{
@@ -167,5 +173,3 @@ export default function Search() {
     </div>
   );
 }
-
-//fix bugs 
