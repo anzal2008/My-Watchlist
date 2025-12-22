@@ -2,12 +2,20 @@
 import React, { useEffect, useState, useContext } from "react";
 import { ThemeContext } from "./ThemeContext";
 import { db } from "./firebase";
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, setDoc } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  doc,
+  updateDoc,
+  deleteDoc,
+  setDoc,
+} from "firebase/firestore";
 
 export default function Watchlist() {
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState("all");
   const { theme } = useContext(ThemeContext);
+  const [hoverId, setHoverId] = useState(null);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "watchlist"), (snapshot) => {
@@ -34,9 +42,8 @@ export default function Watchlist() {
 
   const markCompleted = async (item) => {
     const tmdbId = String(item.tmdbId || item.id);
-    const watchedRef = doc(db, "watched", tmdbId);
 
-    await setDoc(watchedRef, {
+    await setDoc(doc(db, "watched", tmdbId), {
       tmdbId,
       title: item.title,
       type: item.type,
@@ -54,6 +61,33 @@ export default function Watchlist() {
     await deleteDoc(doc(db, "watchlist", item.id));
   };
 
+  /* ---------- STYLES ---------- */
+
+  const actionContainer = {
+    position: "absolute",
+    bottom: 8,
+    right: 8,
+    display: "flex",
+    gap: 8,
+    zIndex: 2,
+  };
+
+  const iconButton = (active, bg = "rgba(0,0,0,0.75)") => ({
+    width: 36,
+    height: 36,
+    borderRadius: "50%",
+    border: "none",
+    background: bg,
+    color: "white",
+    fontSize: 16,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    opacity: active ? 1 : 0.45,
+    transition: "opacity 0.2s ease, transform 0.2s ease",
+  });
+
   const styles = {
     page: {
       padding: 20,
@@ -62,9 +96,6 @@ export default function Watchlist() {
       color: theme === "dark" ? "white" : "black",
     },
     header: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
       marginBottom: 20,
     },
     select: {
@@ -80,12 +111,8 @@ export default function Watchlist() {
       gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
       gap: 20,
     },
-    card: {
-      background: theme === "dark" ? "#111" : "#fff",
-      borderRadius: 10,
-      padding: 10,
-      transition: "transform 0.2s ease",
-      color: theme === "dark" ? "white" : "black",
+    posterWrap: {
+      position: "relative",
     },
     poster: {
       width: "100%",
@@ -98,32 +125,12 @@ export default function Watchlist() {
       borderRadius: 8,
     },
     info: {
-      marginTop: 10,
+      marginTop: 8,
       fontSize: 14,
     },
     input: {
       width: 50,
       marginLeft: 5,
-    },
-    done: {
-      marginTop: 6,
-      width: "100%",
-      background: "green",
-      color: "white",
-      border: "none",
-      padding: 6,
-      borderRadius: 6,
-      cursor: "pointer",
-    },
-    remove: {
-      marginTop: 6,
-      width: "100%",
-      background: "#b00020",
-      color: "white",
-      border: "none",
-      padding: 6,
-      borderRadius: 6,
-      cursor: "pointer",
     },
   };
 
@@ -146,21 +153,40 @@ export default function Watchlist() {
 
       <div style={styles.grid}>
         {filteredItems.map((item) => (
-          <div
-            key={item.id}
-            style={styles.card}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-          >
-            {item.poster ? (
-              <img
-                src={`https://image.tmdb.org/t/p/w300${item.poster}`}
-                alt={item.title}
-                style={styles.poster}
-              />
-            ) : (
-              <div style={styles.placeholder} />
-            )}
+          <div key={item.id}>
+            <div
+              style={styles.posterWrap}
+              onMouseEnter={() => setHoverId(item.id)}
+              onMouseLeave={() => setHoverId(null)}
+            >
+              {item.poster ? (
+                <img
+                  src={`https://image.tmdb.org/t/p/w300${item.poster}`}
+                  alt={item.title}
+                  style={styles.poster}
+                />
+              ) : (
+                <div style={styles.placeholder} />
+              )}
+
+              <div style={actionContainer}>
+                <button
+                  style={iconButton(hoverId === item.id, "#16a34a")}
+                  onClick={() => markCompleted(item)}
+                  title="Mark Completed"
+                >
+                  ✔
+                </button>
+
+                <button
+                  style={iconButton(hoverId === item.id, "#b00020")}
+                  onClick={() => removeItem(item)}
+                  title="Remove"
+                >
+                  ❌
+                </button>
+              </div>
+            </div>
 
             <div style={styles.info}>
               <strong>{item.title}</strong>
@@ -175,19 +201,14 @@ export default function Watchlist() {
                     min="0"
                     max={item.totalSeasons}
                     value={item.seasonsWatched || 0}
-                    onChange={(e) => updateSeasons(item, Number(e.target.value))}
+                    onChange={(e) =>
+                      updateSeasons(item, Number(e.target.value))
+                    }
                     style={styles.input}
                   />{" "}
                   / {item.totalSeasons}
                 </div>
               )}
-
-              <button onClick={() => markCompleted(item)} style={styles.done}>
-                ✔ Completed
-              </button>
-              <button onClick={() => removeItem(item)} style={styles.remove}>
-                ❌ Remove
-              </button>
             </div>
           </div>
         ))}

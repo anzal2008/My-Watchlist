@@ -1,32 +1,57 @@
-// Watched.jsx
 import React, { useEffect, useState, useContext } from "react";
 import { ThemeContext } from "./ThemeContext";
 import { db } from "./firebase";
 import { collection, onSnapshot, doc, deleteDoc } from "firebase/firestore";
 
 export default function Watched() {
+  const { theme } = useContext(ThemeContext);
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState("all");
-  const { theme } = useContext(ThemeContext);
+  const [hoverId, setHoverId] = useState(null);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "watched"), (snapshot) => {
       setItems(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
     return () => unsub();
-  }, []);
+    }, []);
 
-  const filteredItems = items.filter((item) => {
-    if (filter === "all") return true;
-    if (filter === "movie") return item.type === "movie";
-    if (filter === "tv") return item.type === "tv";
-    if (filter === "anime") return item.category === "anime";
-    return true;
-  });
+  const filteredItems = items
+    .filter((item) => {
+      if (filter === "all") return true;
+      if (filter === "movie") return item.type === "movie";
+      if (filter === "tv") return item.type === "tv";
+      if (filter === "anime") return item.category === "anime";
+      return true;
+    })
+    .sort((a, b) => (b.finishedAt || 0) - (a.finishedAt || 0)); // newest first
 
   const removeWatched = async (item) => {
     await deleteDoc(doc(db, "watched", item.id));
   };
+
+  const actionContainer = {
+    position: "absolute",
+    bottom: 8,
+    right: 8,
+    zIndex: 2,
+  };
+
+  const iconButton = (active, bg = "rgba(0,0,0,0.75)") => ({
+    width: 36,
+    height: 36,
+    borderRadius: "50%",
+    border: "none",
+    background: bg,
+    color: "white",
+    fontSize: 16,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    opacity: active ? 1 : 0.45,
+    transition: "opacity 0.2s ease, transform 0.2s ease",
+  });
 
   const styles = {
     page: {
@@ -51,12 +76,8 @@ export default function Watched() {
       gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
       gap: 20,
     },
-    card: {
-      background: theme === "dark" ? "#111" : "#fff",
-      borderRadius: 10,
-      padding: 10,
-      transition: "transform 0.2s ease",
-      color: theme === "dark" ? "white" : "black",
+    posterWrap: {
+      position: "relative",
     },
     poster: {
       width: "100%",
@@ -68,18 +89,8 @@ export default function Watched() {
       background: theme === "dark" ? "#333" : "#ccc",
       borderRadius: 8,
     },
-    remove: {
-      marginTop: 8,
-      width: "100%",
-      background: "#b00020",
-      color: "white",
-      border: "none",
-      padding: 6,
-      borderRadius: 6,
-      cursor: "pointer",
-    },
     info: {
-      marginTop: 10,
+      marginTop: 8,
       fontSize: 14,
     },
   };
@@ -87,7 +98,7 @@ export default function Watched() {
   return (
     <div style={styles.page}>
       <div style={styles.header}>
-        <h2>Watched Shows / Movies</h2>
+        <h2>Watched</h2>
       </div>
 
       <select
@@ -103,35 +114,43 @@ export default function Watched() {
 
       <div style={styles.grid}>
         {filteredItems.map((item) => (
-          <div
-            key={item.id}
-            style={styles.card}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-          >
-            {item.poster ? (
-              <img
-                src={`https://image.tmdb.org/t/p/w300${item.poster}`}
-                alt={item.title}
-                style={styles.poster}
-              />
-            ) : (
-              <div style={styles.placeholder} />
-            )}
+          <div key={item.id}>
+            <div
+              style={styles.posterWrap}
+              onMouseEnter={() => setHoverId(item.id)}
+              onMouseLeave={() => setHoverId(null)}
+            >
+              {item.poster ? (
+                <img
+                  src={`https://image.tmdb.org/t/p/w300${item.poster}`}
+                  alt={item.title}
+                  style={styles.poster}
+                />
+              ) : (
+                <div style={styles.placeholder} />
+              )}
+
+              <div style={actionContainer}>
+                <button
+                  style={iconButton(hoverId === item.id, "#b00020")}
+                  onClick={() => removeWatched(item)}
+                  title="Remove"
+                >
+                  ❌
+                </button>
+              </div>
+            </div>
 
             <div style={styles.info}>
               <strong>{item.title}</strong>
-              <br />
-              ⭐ {item.rating}
-              <br />
-              Type: {item.type === "movie" ? "Movie" : "TV Show"}
-              <br />
-              Status: {item.status || "completed"}
-              <br />
-              Finished: {item.finishedAt ? new Date(item.finishedAt).toLocaleDateString() : "—"}
-              <button onClick={() => removeWatched(item)} style={styles.remove}>
-                ❌ Remove
-              </button>
+              <div>⭐ {item.rating}</div>
+              <div>{item.type === "movie" ? "Movie" : "TV Show"}</div>
+              <div>
+                Finished:{" "}
+                {item.finishedAt
+                  ? new Date(item.finishedAt).toLocaleDateString()
+                  : "—"}
+              </div>
             </div>
           </div>
         ))}

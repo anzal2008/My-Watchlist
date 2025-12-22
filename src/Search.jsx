@@ -10,6 +10,7 @@ export default function Search() {
   const { theme } = useContext(ThemeContext);
   const [results, setResults] = useState([]);
   const [seasonsWatched, setSeasonsWatched] = useState({});
+  const [hoveredId, setHoveredId] = useState(null);
 
   useEffect(() => {
     if (!query) return;
@@ -45,6 +46,7 @@ export default function Search() {
     color: theme === "dark" ? "white" : "#111",
     padding: 10,
     borderRadius: 10,
+    position: "relative",
   };
 
   const buttonStyle = {
@@ -52,6 +54,41 @@ export default function Search() {
     marginTop: 6,
     padding: "6px 0",
     cursor: "pointer",
+  };
+
+  const actionContainer = {
+    position: "absolute",
+    bottom: 8,
+    right: 8,
+    display: "flex",
+    gap: 8,
+    zIndex: 3,
+  };
+
+  const iconButton = (active) => ({
+    width: 36,
+    height: 36,
+    borderRadius: "50%",
+    border: "none",
+    background: "rgba(0,0,0,0.75)",
+    color: "white",
+    fontSize: 16,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    opacity: active ? 1 : 0.5,
+    transition: "opacity 0.2s ease, transform 0.2s ease",
+  });
+
+  const watchedButton = {
+    ...iconButton,
+    background: "#16a34a",
+    color: "white",
+  };
+
+  const iconButtonHover = {
+    filter: "brightness(1.2)",
   };
 
   const filteredResults = results
@@ -118,44 +155,69 @@ export default function Search() {
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-          gap: 20,
+          gap: 20, 
         }}
       >
         {filteredResults.map((item, index) => (
-          <div key={item.id} style={cardStyle}>
-            {index === 0 && (
-              <div
-                style={{
-                  background: "gold",
-                  color: "black",
-                  fontSize: 12,
-                  padding: "2px 6px",
-                  borderRadius: 6,
-                  marginBottom: 6,
-                  width: "fit-content",
-                }}
-              >
-                ⭐ Top Match
-              </div>
-            )}
+          <div
+            key={item.id}
+            style={cardStyle}
+            onMouseEnter={() => setHoveredId(item.id)}
+            onMouseLeave={() => setHoveredId(null)}
+          >
+            <div style={{ position: "relative" }}>
+              {index === 0 && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 8,
+                    left: 8,
+                    background: "gold",
+                    color: "black",
+                    fontSize: 12,
+                    fontWeight: "bold",
+                    padding: "4px 8px",
+                    borderRadius: 999,
+                    zIndex: 2,
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
+                  }}
+                >
+                  ⭐ 
+                </div>
+              )}
 
-            {item.poster_path && (
-              <img
-                src={`https://image.tmdb.org/t/p/w300${item.poster_path}`}
-                alt={item.title || item.name}
-                style={{ width: "100%", borderRadius: 8 }}
-              />
-            )}
+              {item.poster_path && (
+                <img
+                  src={`https://image.tmdb.org/t/p/w300${item.poster_path}`}
+                  alt={item.title || item.name}
+                  style={{ width: "100%", borderRadius: 8 }}
+                />
+              )}
+
+              <div style={actionContainer}>
+                <button
+                  style={iconButton(hoveredId === item.id)}
+                  onClick={() => addToWatchlist(item)}
+                  title="Add to Watchlist"
+                >
+                  ➕
+                </button>
+
+                <button
+                  style={{
+                    ...iconButton(hoveredId === item.id),
+                    background: "#16a34a",
+                  }}
+                  onClick={() => markAsWatched(item)}
+                  title="Mark as Watched"
+                >
+                  ✓
+                </button>
+              </div>
+            </div>
 
             <strong>{item.title || item.name}</strong>
             <div>⭐ {item.vote_average}</div>
-
-            <button style={buttonStyle} onClick={() => addToWatchlist(item)}>
-              ➕ Watchlist
-            </button>
-            <button style={buttonStyle} onClick={() => markAsWatched(item)}>
-              ✔ Watched
-            </button>
           </div>
         ))}
       </div>
