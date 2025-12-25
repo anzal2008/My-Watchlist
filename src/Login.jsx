@@ -4,6 +4,24 @@ import { auth } from "./firebase";
 import { useNavigate, Link } from "react-router-dom";
 import { ThemeContext } from "./ThemeContext";
 
+const colors = {
+  bgLight: "oklch(96% 0.01 260)",
+  bgDark: "oklch(18% 0.02 260)",
+
+  cardLight: "oklch(99% 0.005 260)",
+  cardDark: "oklch(22% 0.02 260)",
+
+  inputLight: "oklch(97% 0.01 260)",
+  inputDark: "oklch(26% 0.02 260)",
+  border: "oklch(70% 0.02 260)",
+
+  textLight: "oklch(20% 0.02 260)",
+  textDark: "oklch(96% 0.01 260)",
+
+  danger: "oklch(62% 0.21 25)",
+  dangerHover: "oklch(58% 0.21 25)"
+};
+
 export default function Login() {
   const { theme } = useContext(ThemeContext);
   const [email, setEmail] = useState("");
@@ -19,7 +37,7 @@ export default function Login() {
       alert(err.message);
     }
   };
-
+  
   const resetPassword = async () => {
     if (!email) return alert("Enter your email first");
     try {
@@ -35,25 +53,28 @@ export default function Login() {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: theme === "dark" ? "#0f0f0f" : "#f4f4f4",
+    background: theme === "dark" ? colors.bgDark : colors.bgLight,
   };
 
   const card = {
     width: 360,
     padding: 28,
     borderRadius: 12,
-    background: theme === "dark" ? "#111" : "#fff",
-    color: theme === "dark" ? "white" : "#111",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
+    background: theme === "dark" ? colors.cardDark : colors.cardLight,
+    color: theme === "dark" ? colors.textDark : colors.textLight,
+    boxShadow: 
+      theme === "dark"
+        ? "0 10px 30px oklch(0% 0 0 / 0.6)"
+        : "0 10px 30px oklch(0% 0 0 / 0.15",
   };
 
   const input = {
     width: "100%",
     padding: "10px 12px",
     borderRadius: 8,
-    border: "1px solid #999",
-    background: theme === "dark" ? "#1c1c1c" : "#fff",
-    color: theme === "dark" ? "white" : "#111",
+    border: `"1px solid ${colors.border}`,
+    background: theme === "dark" ? colors.inputDark : colors.inputLight,
+    color: theme === "dark" ? colors.textDark : colors.textLight,
     outline: "none",
     fontSize: 14,
     boxSizing: "border-box", 
@@ -112,7 +133,9 @@ export default function Login() {
 
         <button
           onClick={login}
-          style={{ ...button, background: "#e50914", color: "white" }}
+          style={{ ...button, background: colors.danger, color: "white" }}
+          onMouseOver={(e) => (e.currentTarget.style.background = colors.dangerHover)}
+          onMouseOut={(e) => (e.currentTarget.style.background = colors.danger)}
         >
           Login
         </button>
@@ -122,7 +145,7 @@ export default function Login() {
           style={{
             ...button,
             background: "transparent",
-            color: theme === "dark" ? "#aaa" : "#444",
+            color: theme === "dark" ? "oklch(75% 0.02 260)" : "oklch(40% 0.02 260",
           }}
         >
           Forgot password?
@@ -130,7 +153,7 @@ export default function Login() {
 
         <p style={{ textAlign: "center", marginTop: 16 }}>
           Don’t have an account?{" "}
-          <Link to="/signup" style={{ color: "#e50914", textDecoration: "none" }}>
+          <Link to="/signup" style={{ color: colors.danger, textDecoration: "none", fontWeight: 500,}}>
             Sign up
           </Link>
         </p>

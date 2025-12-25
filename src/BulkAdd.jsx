@@ -3,34 +3,50 @@ import { ThemeContext } from "./ThemeContext";
 import { db } from "./firebase";
 import { collection, addDoc } from "firebase/firestore";
 
+const palette = (theme) => ({
+  bg: theme === "dark" ? "oklch(0.14 0.025 264)" : "oklch(0.97 0.005 264)",
+  surface: theme === "dark" ? "oklch(0.2 0.02 264)" : "oklch(1 0 0)",
+  border: theme === "dark" ? "oklch(0.28 0.03 264)" : "oklch(0.85 0.02 264)",
+  text: theme === "dark" ? "oklch(0.96 0.04 264)" : "oklch(0.15 0.05 264)",
+  muted: theme === "dark" ? "oklch(0.7 0.03 264)" : "oklch(0.45 0.03 264)",
+  primary: "oklch(0.65 0.16 260)",
+  success: "oklch(0.7 0.07 160)",
+});
+
 export default function BulkAdd() {
+  const { theme } = useContext(ThemeContext);
+  const colors = palette(theme);
+
   const [input, setInput] = useState("");
-  const {theme} = useContext(ThemeContext);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const apiKey = "3f3a43be23e6ffc9e3acb7fd43f7eea7"; 
+  const [toast, setToast] = useState(null);
+  const [progress,setProgress] = useState(0);
 
-  function normalize(s = "") {
-    return (s || "")
+  const apiKey = "3f3a43be23e6ffc9e3acb7fd43f7eea7";
+
+  const normalize = (s = "") =>
+    s
       .toLowerCase()
-      .replace(/[\u2018\u2019\u201C\u201D"“”']/g, "") 
-      .replace(/[^\w\s]/g, "") 
+      .replace(/[\u2018\u2019\u201C\u201D"“”']/g, "")
+      .replace(/[^\w\s]/g, "")
       .replace(/\s+/g, " ")
       .trim();
-  }
+
   function levenshtein(a = "", b = "") {
-    a = a || "";
-    b = b || "";
-    const A = normalize(a); 
+    const A = normalize(a);
     const B = normalize(b);
     if (A === B) return 0;
-    const m = A.length;
-    const n = B.length;
-    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
-    for (let i = 0; i <= m; i++) dp[i][0] = i;
-    for (let j = 0; j <= n; j++) dp[0][j] = j;
-    for (let i = 1; i <= m; i++) {
-      for (let j = 1; j <= n; j++) {
+
+    const dp = Array.from({ length: A.length + 1 }, () =>
+      new Array(B.length + 1).fill(0)
+    );
+
+    for (let i = 0; i <= A.length; i++) dp[i][0] = i;
+    for (let j = 0; j <= B.length; j++) dp[0][j] = j;
+
+    for (let i = 1; i <= A.length; i++) {
+      for (let j = 1; j <= B.length; j++) {
         const cost = A[i - 1] === B[j - 1] ? 0 : 1;
         dp[i][j] = Math.min(
           dp[i - 1][j] + 1,
@@ -39,69 +55,35 @@ export default function BulkAdd() {
         );
       }
     }
-    return dp[m][n];
+    return dp[A.length][B.length];
   }
 
-  function distanceRatio(a, b) {
-    const d = levenshtein(a, b);
-    const L = Math.max(normalize(a).length, normalize(b).length, 1);
-    return d / L;
-  }
+  const distanceRatio = (a, b) =>
+    levenshtein(a, b) / Math.max(normalize(a).length, normalize(b).length, 1);
 
-  const styles ={
-    page: {
-      minHeight: "100vh",
-      padding: 20,
-      background: theme === "dark" ? "#000" : "#f0f0f0",
-      color: theme === "dark" ? "white" : "black",
-    },
-    textarea: {
-      width: "100%",
-      height: 150,
-      background: theme === "dark" ? "#111" : "#fff",
-      color: theme === "dark" ? "white" : "black",
-      border: "1px solid #999",
-      borderRadius: 6,
-      padding: 10,
-    },
-    button: {
-      marginTop: 10,
-      padding: "9px 12px",
-      borderRadius: 6,
-      border: "none",
-      cursor: "pointer",
-      background: theme === "dark" ? "#fff" : "#111",
-      color: theme === "dark" ? "#111" : "#fff",
-    }
-  };
-  
   async function tmdbSearch(query) {
     const q = encodeURIComponent(query);
-    const endpoints = [
+    const urls = [
       `https://api.themoviedb.org/3/search/multi?api_key=${apiKey}&query=${q}`,
       `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${q}`,
       `https://api.themoviedb.org/3/search/tv?api_key=${apiKey}&query=${q}`,
     ];
-    for (const url of endpoints) {
-      try {
-        const res = await fetch(url);
-        if (!res.ok) continue;
-        const data = await res.json();
-        if (data && data.results && data.results.length > 0) {
-          return data.results;
-        }
-      } catch (err) {
-        console.error("tmdb search error", err);
-      }
+
+    for (const url of urls) {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (data?.results?.length) return data.results;
     }
     return [];
   }
 
   async function fetchTvSeasonsIfNeeded(item) {
-    if (!item || item.media_type !== "tv") return 1;
+    if (item?.media_type !== "tv") return 1;
     try {
-      const url = `https://api.themoviedb.org/3/tv/${item.id}?api_key=${apiKey}`;
-      const res = await fetch(url);
+      const res = await fetch(
+        `https://api.themoviedb.org/3/tv/${item.id}?api_key=${apiKey}`
+      );
       const data = await res.json();
       return data?.number_of_seasons || 1;
     } catch {
@@ -109,71 +91,56 @@ export default function BulkAdd() {
     }
   }
 
-  function splitByDelimiters(text) {
-    const parts = text
-      .split(/(?:\r\n|\n|,|;|\||\u2028)|\s{2,}/g) // newlines, commas, semicolons, pipes or 2+ spaces
-      .map((t) => t.trim())
-      .filter(Boolean);
-    return parts;
-  }
-
-  async function greedyScanAndResolve(text, maxWords = 8) {
-    const tokens = text
-      .replace(/\s+/g, " ")
-      .trim()
-      .split(" ")
-      .filter(Boolean);
+  async function greedyScanAndResolve(text, maxWords = 7) {
+    const tokens = text.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
+    const total = tokens.length;
     const found = [];
     let i = 0;
 
     while (i < tokens.length) {
       let matched = null;
-      let matchedSpan = 0;
+      let spanUsed = 0;
 
       for (let span = Math.min(maxWords, tokens.length - i); span >= 1; span--) {
-        const cand = tokens.slice(i, i + span).join(" ");
-        if (cand.length < 2) continue;
-        const results = await tmdbSearch(cand);
-        if (!results || results.length === 0) continue;
+        const candidate = tokens.slice(i, i + span).join(" ");
+        const results = await tmdbSearch(candidate);
+        if (!results.length) continue;
 
         let best = null;
-        let bestRatio = Infinity;
-        const top = results.slice(0, 10);
-        for (const r of top) {
-          const candidateTitle = r.title || r.name || "";
-          const ratio = distanceRatio(cand, candidateTitle);
-          if (ratio < bestRatio) {
-            bestRatio = ratio;
+        let bestScore = Infinity;
+
+        for (const r of results.slice(0, 8)) {
+          const title = r.title || r.name || "";
+          const score = distanceRatio(candidate, title);
+          if (score < bestScore) {
+            bestScore = score;
             best = r;
           }
         }
 
-      
-        if (best && bestRatio <= 0.45) {
+        if (best && bestScore <= 0.45) {
           matched = best;
-          matchedSpan = span;
-          break; 
+          spanUsed = span;
+          break;
         }
       }
 
       if (matched) {
-        const totalSeasons =
-          matched.media_type === "tv"
-            ? await fetchTvSeasonsIfNeeded(matched)
-            : 1;
-
         found.push({
           id: matched.id,
           title: matched.title || matched.name,
           poster: matched.poster_path,
           rating: matched.vote_average ?? null,
-          type: matched.media_type === "movie" ? "movie" : matched.media_type === "tv" ? "tv" : "movie",
-          totalSeasons,
-          seasonsWatched: 0,
+          type: matched.media_type === "tv" ? "tv" : "movie",
+          totalSeasons:
+            matched.media_type === "tv"
+              ? await fetchTvSeasonsIfNeeded(matched)
+              : 1,
+          rawMatch: tokens.slice(i, i + spanUsed).join(" "),
           status: "not started",
-          rawMatch: tokens.slice(i, i + matchedSpan).join(" "),
         });
-        i += matchedSpan; 
+        i += spanUsed;
+        if(i % 2 === 0) setProgress(Math.round((i/total)*100));
       } else {
         found.push({
           id: null,
@@ -182,203 +149,190 @@ export default function BulkAdd() {
           rating: null,
           type: "unknown",
           totalSeasons: 1,
-          seasonsWatched: 0,
-          status: "not found",
           rawMatch: tokens[i],
+          status: "not found",
         });
         i += 1;
+        if(i % 2 === 0) setProgress(Math.round((i/total)*100));
+
       }
     }
 
     return found;
   }
 
-
-  const handleSearchList = async () => {
+  const handleSearch = async () => {
+    if (!input.trim()) return;
     setLoading(true);
+    setProgress(0);
     setResults([]);
-
-    const parts = splitByDelimiters(input);
-
-    let candidates = [];
-
-    if (parts.length > 1 && parts.some((p) => p.split(" ").length > 1)) {
-      for (const rawTitle of parts) {
-        try {
-          const list = await tmdbSearch(rawTitle);
-          if (list && list.length > 0) {
-            let best = null;
-            let bestRatio = Infinity;
-            for (const r of list.slice(0, 8)) {
-              const candidateTitle = r.title || r.name || "";
-              const ratio = distanceRatio(rawTitle, candidateTitle);
-              if (ratio < bestRatio) {
-                bestRatio = ratio;
-                best = r;
-              }
-            }
-            if (best && bestRatio <= 0.6) {
-              const totalSeasons = best.media_type === "tv" ? await fetchTvSeasonsIfNeeded(best) : 1;
-              candidates.push({
-                id: best.id,
-                title: best.title || best.name,
-                poster: best.poster_path,
-                rating: best.vote_average ?? null,
-                type: best.media_type === "movie" ? "movie" : best.media_type === "tv" ? "tv" : "movie",
-                totalSeasons,
-                seasonsWatched: 0,
-                status: "not started",
-                rawMatch: rawTitle,
-              });
-            } else {
-              candidates.push({
-                id: null,
-                title: rawTitle,
-                poster: null,
-                rating: null,
-                type: "unknown",
-                totalSeasons: 1,
-                seasonsWatched: 0,
-                status: "not found",
-                rawMatch: rawTitle,
-              });
-            }
-          } else {
-            candidates.push({
-              id: null,
-              title: rawTitle,
-              poster: null,
-              rating: null,
-              type: "unknown",
-              totalSeasons: 1,
-              seasonsWatched: 0,
-              status: "not found",
-              rawMatch: rawTitle,
-            });
-          }
-        } catch (err) {
-          console.error("resolve part error", err);
-        }
-      }
-
-      setResults(candidates);
-      setLoading(false);
-      return;
-    }
-
-    const scanned = await greedyScanAndResolve(input.trim(), 7); // try up to 7-word candidate chunks
-    setResults(scanned);
+    
+    const resolved = await greedyScanAndResolve(input);
+    setResults(resolved);
     setLoading(false);
+    setProgress(100);
   };
 
   const addItem = async (item) => {
-    try {
-      const docData = {
-        tmdbId: item.id || null,
-        title: item.title,
-        type: item.type === "tv" ? "tv" : item.type === "movie" ? "movie" : "movie",
-        category: item.type === "tv" && item.title ? ( /anime/i.test(item.title) ? "anime" : "normal" ) : "normal",
-        poster: item.poster,
-        rating: item.rating,
-        seasonsWatched: item.seasonsWatched || 0,
-        totalSeasons: item.totalSeasons || 1,
-        status: item.status || "not started",
-        lastChecked: Date.now(),
-        finishedAt: null,
-      };
-      await addDoc(collection(db, "watchlist"), docData);
-      alert(`Added "${item.title}"`);
-    } catch (err) {
-      console.error("addItem error", err);
-      alert("Failed to add item — see console.");
-    }
+    await addDoc(collection(db, "watchlist"), {
+      tmdbId: item.id,
+      title: item.title,
+      type: item.type,
+      poster: item.poster,
+      rating: item.rating,
+      totalSeasons: item.totalSeasons,
+      seasonsWatched: 0,
+      status: item.status,
+      createdAt: Date.now(),
+    });
   };
 
   const addAll = async () => {
     for (const item of results) {
-      await addItem(item);
+      if (item.id) await addItem(item);
     }
-    alert("All items added!");
+    setToast("All items added successfully!");
+    setTimeout(() => setToast(null), 2500);
+  };
+
+  const styles = {
+    page: {
+      minHeight: "100vh",
+      padding: 20,
+      background: colors.bg,
+      color: colors.text,
+    },
+    textarea: {
+      width: "100%",
+      minHeight: 140,
+      padding: 12,
+      borderRadius: 10,
+      border: `1px solid ${colors.border}`,
+      background: colors.surface,
+      color: colors.text,
+    },
+    card: {
+      display: "flex",
+      gap: 14,
+      padding: 14,
+      background: colors.surface,
+      borderRadius: 14,
+      border: `1px solid ${colors.border}`,
+      boxShadow: "0 12px 30px oklch(0% 0 0 / 0.25)",
+      marginBottom: 14,
+    },
+    button: {
+      padding: "8px 14px",
+      borderRadius: 10,
+      border: "none",
+      background: colors.primary,
+      color: "white",
+      cursor: "pointer",
+    },
   };
 
   return (
     <div style={styles.page}>
       <h2>Bulk Add</h2>
 
-      <p>Paste titles(may take a while)</p>
-
       <textarea
+        style={styles.textarea}
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        placeholder="Paste a paragraph or list of titles..."
-        rows={8}
-        style={styles.textarea}
+        placeholder="Paste one line or a paragraph of titles..."
       />
 
-      <div style={{ marginTop: 8 }}>
-        <button onClick={handleSearchList} style={{ padding: "8px 12px" }}>Search Titles</button>
-        <span style={{ marginLeft: 12 }}>{loading ? "Searching TMDB..." : ""}</span>
-      </div>
+      <div style={{ marginTop: 12 }}>
+        <button style={styles.button} onClick={handleSearch}>
+          {loading ? "Searching..." : "Search Titles"}
+        </button>
 
-      <div style={{ marginTop: 20 }}>
         {results.length > 0 && (
-          <>
-            <h3>Parsed results</h3>
-            <button onClick={addAll} style={{ background: "green", color: "white", padding: "6px 10px", borderRadius: 6, marginBottom: 12 }}>
-              Add All to Watchlist
-            </button>
-
-            {results.map((item, idx) => (
-              <div key={idx} style={{ display: "flex", gap: 12, marginBottom: 14, alignItems: "flex-start" }}>
-                {item.poster ? (
-                  <img src={`https://image.tmdb.org/t/p/w200${item.poster}`} alt={item.title} style={{ width: 80, borderRadius: 6 }} />
-                ) : (
-                  <div style={{ width: 80, height: 120, background: "#eee", borderRadius: 6, display:"flex", alignItems:"center", justifyContent:"center", color:"#888" }}>
-                    no image
-                  </div>
-                )}
-
-                <div style={{ flex: 1 }}>
-                  <strong>{item.title}</strong> <br />
-                  <small style={{ color: "#666" }}>raw: {item.rawMatch}</small> <br />
-                  <span>type: {item.type}</span> • <span>rating: {item.rating ?? "N/A"}</span> • <span>seasons: {item.totalSeasons}</span> <br />
-                  <div style={{ marginTop: 6 }}>
-                    <button onClick={() => addItem(item)} style={{ marginRight: 8 }}>Add</button>
-                    {item.status === "not found" && (
-                      <button onClick={() => {
-                        const newTitle = prompt("Edit title to search:", item.title || item.rawMatch);
-                        if (newTitle) {
-                          (async () => {
-                            const list = await tmdbSearch(newTitle);
-                            const best = list?.[0];
-                            if (best) {
-                              const totalSeasons = best.media_type === "tv" ? await fetchTvSeasonsIfNeeded(best) : 1;
-                              const resolved = {
-                                id: best.id,
-                                title: best.title || best.name,
-                                poster: best.poster_path,
-                                rating: best.vote_average ?? null,
-                                type: best.media_type === "movie" ? "movie" : best.media_type === "tv" ? "tv" : "movie",
-                                totalSeasons,
-                                seasonsWatched: 0,
-                                status: "not started",
-                                rawMatch: newTitle,
-                              };
-                              setResults(prev => prev.map((p, i) => i === idx ? resolved : p));
-                            } else {
-                              alert("No match found for that edited title.");
-                            }
-                          })();
-                        }
-                      }}>Edit & Retry</button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </>
+          <button
+            style={{
+              ...styles.button,
+              marginLeft: 10,
+              background: colors.success,
+            }}
+            onClick={addAll}
+          >
+            Add All
+          </button>
         )}
       </div>
+
+      <div style={{ marginTop: 24 }}>
+        {results.map((item, i) => (
+          <div key={i} style={styles.card}>
+            {item.poster ? (
+              <img
+                src={`https://image.tmdb.org/t/p/w200${item.poster}`}
+                alt=""
+                style={{ width: 80, borderRadius: 10 }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 80,
+                  height: 120,
+                  background: colors.border,
+                  borderRadius: 10,
+                }}
+              />
+            )}
+
+            <div style={{ flex: 1 }}>
+              <strong>{item.title}</strong>
+              <div style={{ color: colors.muted, fontSize: 13 }}>
+                raw: {item.rawMatch}
+              </div>
+              <div>
+                {item.type} • ⭐ {item.rating ?? "N/A"} • seasons{" "}
+                {item.totalSeasons}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {loading && (
+        <div
+          style={{
+            margingTop: 16,
+            height: 10,
+            width: "100%",
+            background: colors.border,
+            borderRadius: 999,
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              width: `${progress}%`,
+              background: "oklch(0.45 0.12 255)",
+              transition: "width 0.25s ease"
+            }}
+          />
+        </div>
+      )}
+      {toast && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            background: "oklch(0.7 0.05 260)",
+            color: "white",
+            padding: "12px 18px",
+            borderRadius: 14,
+            boxShadow: "0 20px 40px oklch(0% 0 0 / 0.4)",
+            fontWeight: 500,
+            zIndex: 9999,
+          }}
+        >
+          {toast}
+        </div>
+      )}
     </div>
   );
 }

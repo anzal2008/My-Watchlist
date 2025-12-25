@@ -8,8 +8,8 @@ export default function Search() {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q");
   const { theme } = useContext(ThemeContext);
+
   const [results, setResults] = useState([]);
-  const [seasonsWatched, setSeasonsWatched] = useState({});
   const [hoveredId, setHoveredId] = useState(null);
 
   useEffect(() => {
@@ -17,7 +17,6 @@ export default function Search() {
 
     const fetchResults = async () => {
       const apiKey = "3f3a43be23e6ffc9e3acb7fd43f7eea7";
-
       const url = `https://api.themoviedb.org/3/search/multi?api_key=${apiKey}&query=${encodeURIComponent(
         query
       )}`;
@@ -34,62 +33,66 @@ export default function Search() {
     fetchResults();
   }, [query]);
 
+  /* ---------- STYLES ---------- */
+
   const pageStyle = {
-    padding: 20,
-    backgroundColor: theme === "dark" ? "#0f0f0f" : "#f5f5f5",
-    color: theme === "dark" ? "white" : "#111",
+    padding: 24,
+    background:
+      theme === "dark"
+        ? "oklch(14% 0.01 250)"
+        : "oklch(98% 0.01 250)",
+    color: theme === "dark" ? "white" : "black",
     minHeight: "100vh",
   };
 
   const cardStyle = {
-    backgroundColor: theme === "dark" ? "#111" : "white",
-    color: theme === "dark" ? "white" : "#111",
-    padding: 10,
-    borderRadius: 10,
-    position: "relative",
+    background:
+      theme === "dark"
+        ? "oklch(22% 0.015 250)"
+        : "oklch(96% 0.01 250)",
+    borderRadius: 18,
+    padding: 12,
+    boxShadow:
+      theme === "dark"
+        ? "0 8px 24px rgba(0,0,0,0.4)"
+        : "0 8px 24px rgba(0,0,0,0.08)",
+    transition: "transform 0.2s ease, box-shadow 0.2s ease",
   };
 
-  const buttonStyle = {
+  const posterStyle = {
     width: "100%",
-    marginTop: 6,
-    padding: "6px 0",
-    cursor: "pointer",
+    borderRadius: 12,
+    display: "block",
   };
 
   const actionContainer = {
     position: "absolute",
-    bottom: 8,
-    right: 8,
+    bottom: 10,
+    right: 10,
     display: "flex",
     gap: 8,
     zIndex: 3,
   };
 
-  const iconButton = (active) => ({
+  const iconButton = (visible, bg) => ({
     width: 36,
     height: 36,
     borderRadius: "50%",
     border: "none",
-    background: "rgba(0,0,0,0.75)",
+    background: bg,
     color: "white",
     fontSize: 16,
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    opacity: active ? 1 : 0.5,
+    opacity: visible ? 1 : 0,
+    transform: visible ? "scale(1)" : "scale(0.9)",
     transition: "opacity 0.2s ease, transform 0.2s ease",
+    boxShadow: "0 4px 10px rgba(0,0,0,0.4)",
   });
 
-  const watchedButton = {
-    ...iconButton,
-    background: "#16a34a",
-    color: "white",
-  };
-
-  const iconButtonHover = {
-    filter: "brightness(1.2)",
-  };
+  /* ---------- DATA ---------- */
 
   const filteredResults = results
     .filter(
@@ -99,14 +102,13 @@ export default function Search() {
     )
     .sort((a, b) => b.vote_average * b.popularity - a.vote_average * a.popularity);
 
+  /* ---------- ACTIONS ---------- */
+
   const addToWatchlist = async (item) => {
     const ref = doc(db, "watchlist", String(item.id));
     const snap = await getDoc(ref);
 
-    if (snap.exists()) {
-      alert("Already in watchlist");
-      return;
-    }
+    if (snap.exists()) return alert("Already in watchlist");
 
     await setDoc(ref, {
       tmdbId: item.id,
@@ -114,8 +116,6 @@ export default function Search() {
       type: item.media_type,
       poster: item.poster_path,
       rating: item.vote_average,
-      seasonsWatched: seasonsWatched[item.id] || 0,
-      totalSeasons: 1,
       status: "not started",
       lastChecked: Date.now(),
     });
@@ -127,10 +127,7 @@ export default function Search() {
     const ref = doc(db, "watched", String(item.id));
     const snap = await getDoc(ref);
 
-    if (snap.exists()) {
-      alert("Already marked as watched");
-      return;
-    }
+    if (snap.exists()) return alert("Already marked as watched");
 
     await setDoc(ref, {
       tmdbId: item.id,
@@ -143,19 +140,20 @@ export default function Search() {
     });
 
     await deleteDoc(doc(db, "watchlist", String(item.id)));
-
     alert(`Marked "${item.title || item.name}" as watched`);
   };
 
+  /* ---------- RENDER ---------- */
+
   return (
     <div style={pageStyle}>
-      <h2>Results for “{query}”</h2>
+      <h2 style={{ marginBottom: 20 }}>Results for “{query}”</h2>
 
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-          gap: 20, 
+          gap: 24,
         }}
       >
         {filteredResults.map((item, index) => (
@@ -172,17 +170,16 @@ export default function Search() {
                     position: "absolute",
                     top: 8,
                     left: 8,
-                    background: "gold",
+                    background: "oklch(85% 0.16 85)",
                     color: "black",
                     fontSize: 12,
                     fontWeight: "bold",
-                    padding: "4px 8px",
+                    padding: "4px 10px",
                     borderRadius: 999,
                     zIndex: 2,
-                    boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
                   }}
                 >
-                  ⭐ 
+                  ⭐ Top
                 </div>
               )}
 
@@ -190,13 +187,16 @@ export default function Search() {
                 <img
                   src={`https://image.tmdb.org/t/p/w300${item.poster_path}`}
                   alt={item.title || item.name}
-                  style={{ width: "100%", borderRadius: 8 }}
+                  style={posterStyle}
                 />
               )}
 
               <div style={actionContainer}>
                 <button
-                  style={iconButton(hoveredId === item.id)}
+                  style={iconButton(
+                    hoveredId === item.id,
+                    "oklch(55% 0.18 260)"
+                  )}
                   onClick={() => addToWatchlist(item)}
                   title="Add to Watchlist"
                 >
@@ -204,10 +204,10 @@ export default function Search() {
                 </button>
 
                 <button
-                  style={{
-                    ...iconButton(hoveredId === item.id),
-                    background: "#16a34a",
-                  }}
+                  style={iconButton(
+                    hoveredId === item.id,
+                    "oklch(60% 0.18 145)"
+                  )}
                   onClick={() => markAsWatched(item)}
                   title="Mark as Watched"
                 >
@@ -216,8 +216,12 @@ export default function Search() {
               </div>
             </div>
 
-            <strong>{item.title || item.name}</strong>
-            <div>⭐ {item.vote_average}</div>
+            <div style={{ marginTop: 10 }}>
+              <strong>{item.title || item.name}</strong>
+              <div style={{ opacity: 0.65 }}>
+                ⭐ {item.vote_average.toFixed(1)}
+              </div>
+            </div>
           </div>
         ))}
       </div>

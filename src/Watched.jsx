@@ -3,18 +3,28 @@ import { ThemeContext } from "./ThemeContext";
 import { db } from "./firebase";
 import { collection, onSnapshot, doc, deleteDoc } from "firebase/firestore";
 
+const palette = (theme) => ({
+  bg: theme === "dark" ? "oklch(0.15 0.025 264)" : "oklch(0.96 0.005 264)",
+  card: theme === "dark" ? "oklch(0.22 0.02 264)" : "oklch(0.99 0.005 264)",
+  border: theme === "dark" ? "oklch(0.28 0.03 264)" : "oklch(0.85 0.02 264)",
+  text: theme === "dark" ? "oklch(0.96 0.05 264)" : "oklch(0.15 0.05 264)",
+  textMuted: theme === "dark" ? "oklch(0.75 0.04 264)" : "oklch(0.45 0.03 264)",
+  danger: "oklch(0.6 0.15 25)",
+});
+
 export default function Watched() {
   const { theme } = useContext(ThemeContext);
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState("all");
   const [hoverId, setHoverId] = useState(null);
+  const colors = palette(theme);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "watched"), (snapshot) => {
       setItems(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
     return () => unsub();
-    }, []);
+  }, []);
 
   const filteredItems = items
     .filter((item) => {
@@ -24,7 +34,7 @@ export default function Watched() {
       if (filter === "anime") return item.category === "anime";
       return true;
     })
-    .sort((a, b) => (b.finishedAt || 0) - (a.finishedAt || 0)); // newest first
+    .sort((a, b) => (b.finishedAt || 0) - (a.finishedAt || 0));
 
   const removeWatched = async (item) => {
     await deleteDoc(doc(db, "watched", item.id));
@@ -37,28 +47,26 @@ export default function Watched() {
     zIndex: 2,
   };
 
-  const iconButton = (active, bg = "rgba(0,0,0,0.75)") => ({
+  const iconButton = (active) => ({
     width: 36,
     height: 36,
     borderRadius: "50%",
     border: "none",
-    background: bg,
+    background: colors.danger,
     color: "white",
-    fontSize: 16,
     cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    opacity: active ? 1 : 0.45,
+    opacity: active ? 1 : 0.3,
+    transform: active ? "scale(1)" : "scale(0.9)",
     transition: "opacity 0.2s ease, transform 0.2s ease",
+    boxShadow: "0 4px 12px oklch(0% 0 0 / 0.4)",
   });
 
   const styles = {
     page: {
       padding: 20,
       minHeight: "100vh",
-      background: theme === "dark" ? "#000" : "#f0f0f0",
-      color: theme === "dark" ? "white" : "black",
+      background: colors.bg,
+      color: colors.text,
     },
     header: {
       marginBottom: 20,
@@ -66,9 +74,9 @@ export default function Watched() {
     select: {
       marginBottom: 20,
       padding: 6,
-      background: theme === "dark" ? "#333" : "#fff",
-      color: theme === "dark" ? "white" : "black",
-      border: "1px solid #999",
+      background: colors.bg,
+      color: colors.text,
+      border: `1px solid ${colors.border}`,
       borderRadius: 6,
     },
     grid: {
@@ -86,13 +94,24 @@ export default function Watched() {
     placeholder: {
       width: "100%",
       height: 250,
-      background: theme === "dark" ? "#333" : "#ccc",
+      background: colors.bg,
       borderRadius: 8,
     },
     info: {
       marginTop: 8,
       fontSize: 14,
     },
+    card: (active) => ({
+      background: colors.card,
+      borderRadius: 14,
+      padding: 10,
+      border: `1px solid ${colors.border}`,
+      boxShadow: active
+        ? "0 16px 40px oklch(0% 0 0 / 0.45)"
+        : "0 10px 30px oklch(0% 0 0 / 0.25)",
+      transform: active ? "translateY(-4px)" : "translateY(0)",
+      transition: "all 0.25s ease",
+    }),
   };
 
   return (
@@ -114,12 +133,13 @@ export default function Watched() {
 
       <div style={styles.grid}>
         {filteredItems.map((item) => (
-          <div key={item.id}>
-            <div
-              style={styles.posterWrap}
-              onMouseEnter={() => setHoverId(item.id)}
-              onMouseLeave={() => setHoverId(null)}
-            >
+          <div
+            key={item.id}
+            style={styles.card(hoverId === item.id)}
+            onMouseEnter={() => setHoverId(item.id)}
+            onMouseLeave={() => setHoverId(null)}
+          >
+            <div style={styles.posterWrap}>
               {item.poster ? (
                 <img
                   src={`https://image.tmdb.org/t/p/w300${item.poster}`}
@@ -132,7 +152,7 @@ export default function Watched() {
 
               <div style={actionContainer}>
                 <button
-                  style={iconButton(hoverId === item.id, "#b00020")}
+                  style={iconButton(hoverId === item.id)}
                   onClick={() => removeWatched(item)}
                   title="Remove"
                 >

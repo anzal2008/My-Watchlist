@@ -5,7 +5,6 @@ export const ThemeContext = createContext();
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState("light");
 
-  // Load theme from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("theme");
     if (saved) setTheme(saved);
@@ -17,15 +16,19 @@ export const ThemeProvider = ({ children }) => {
   }, [theme]);
 
   useEffect(() => {
-    document.body.style.backgroundColor =
-      theme === "dark" ? "#0f0f0f" : "#f5f5f5";
-    document.body.style.color =
-      theme === "dark" ? "#0f0f0f" : "#f5f5f5";
+    document.body.style.background =
+      theme === "dark"
+        ? "oklch(0.12 0.02 264)"
+        : "oklch(0.98 0.005 264)";
 
+    document.body.style.color =
+      theme === "dark"
+        ? "oklch(0.96 0.05 264)"
+        : "oklch(0.15 0.05 264)";
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme(theme === "light" ? "dark" : "light");
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
   };
 
   return (

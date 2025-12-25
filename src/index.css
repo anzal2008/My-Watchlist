@@ -1,68 +1,158 @@
+/* ------------------------ VARIABLES ------------------------ */
 :root {
+  --bg-dark: oklch(0.1 0.025 264);
+  --bg: oklch(0.15 0.025 264);
+  --bg-light: oklch(0.2 0.025 264);
+  --text: oklch(0.96 0.05 264);
+  --text-muted: oklch(0.76 0.05 264);
+  --highlight: oklch(0.5 0.05 264);
+  --border: oklch(0.45 0.05 264);
+  --border-muted: oklch(0.38 0.05 264);
+  --primary: oklch(0.76 0.1 264);
+  --secondary: oklch(0.76 0.1 84);
+  --danger: oklch(0.7 0.05 30);
+
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+/* LIGHT MODE OVERRIDES */
+body.light {
+  --bg-dark: oklch(0.92 0.025 264);
+  --bg: oklch(0.96 0.025 264);
+  --bg-light: oklch(1 0.025 264);
+  --text: oklch(0.15 0.05 264);
+  --text-muted: oklch(0.4 0.05 264);
+  --border: oklch(0.45 0.05 264);
+  --border-muted: oklch(0.55 0.05 264);
+  --primary: oklch(0.4 0.1 264);
+  --secondary: oklch(0.4 0.1 84);
+  --danger: oklch(0.5 0.05 30);
 }
 
+/* ------------------------ BASE STYLES ------------------------ */
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--bg);
+  color: var(--text);
+  transition: background 0.25s, color 0.25s;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* Links */
+a {
+  font-weight: 500;
+  color: var(--primary);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--secondary);
 }
 
+/* Inputs */
+input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-muted);
+  background: var(--bg-light);
+  color: var(--text);
+  outline: none;
+  font-size: 14px;
+  box-sizing: border-box;
+  transition: border-color 0.25s, background 0.25s;
+}
+input:focus,
+input:hover {
+  border-color: var(--primary);
+}
+
+/* Buttons */
 button {
   border-radius: 8px;
-  border: 1px solid transparent;
+  border: 1px solid var(--border-muted);
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  transition: border-color 0.25s, background-color 0.25s;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* Button hover */
+button:hover {
+  border-color: var(--primary);
+}
+
+/* Danger button (red) */
+button.danger {
+  background: var(--danger);
+  color: #fff;
+  border: 1px solid var(--danger);
+}
+button.danger:hover {
+  background-color: oklch(0.65 0.05 30);
+}
+
+/* Card */
+.card {
+  width: 360px;
+  padding: 28px;
+  border-radius: 12px;
+  background: var(--bg-light);
+  color: var(--text);
+  border: 1px solid var(--border-muted);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  transition: background 0.25s, color 0.25s;
+}
+
+/* Card title */
+.card-title {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Password wrapper */
+.password-wrapper {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.eye-icon {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  cursor: pointer;
+  font-size: 18px;
+  user-select: none;
+  color: var(--text-muted);
+}
+
+/* Text buttons */
+.text-button {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+/* Signup text */
+.signup-text {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 0.95rem;
+}
+
+.signup-link {
+  color: var(--primary);
+}
+.signup-link:hover {
+  color: var(--secondary);
 }
