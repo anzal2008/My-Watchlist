@@ -2,6 +2,7 @@ import React, { useContext, useState } from "react";
 import { ThemeContext } from "./ThemeContext";
 import { db } from "./firebase";
 import { collection, addDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 
 const palette = (theme) => ({
   bg: theme === "dark" ? "oklch(0.14 0.025 264)" : "oklch(0.97 0.005 264)",
@@ -22,6 +23,7 @@ export default function BulkAdd() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
   const [progress,setProgress] = useState(0);
+  const navigate = useNavigate();
 
   const apiKey = "3f3a43be23e6ffc9e3acb7fd43f7eea7";
 
@@ -126,12 +128,16 @@ export default function BulkAdd() {
       }
 
       if (matched) {
+      const isAnime = matched_type === "tv" &&
+      matched.genre_ids?.includes(16);
         found.push({
           id: matched.id,
           title: matched.title || matched.name,
           poster: matched.poster_path,
           rating: matched.vote_average ?? null,
+
           type: matched.media_type === "tv" ? "tv" : "movie",
+          isAnime,
           totalSeasons:
             matched.media_type === "tv"
               ? await fetchTvSeasonsIfNeeded(matched)
@@ -178,6 +184,7 @@ export default function BulkAdd() {
       tmdbId: item.id,
       title: item.title,
       type: item.type,
+      isAnime: item.isAnime ?? false,
       poster: item.poster,
       rating: item.rating,
       totalSeasons: item.totalSeasons,
@@ -269,6 +276,7 @@ export default function BulkAdd() {
                 src={`https://image.tmdb.org/t/p/w200${item.poster}`}
                 alt=""
                 style={{ width: 80, borderRadius: 10 }}
+                onClick={() => navigate(`/details/${item.id}`)}
               />
             ) : (
               <div
@@ -287,7 +295,7 @@ export default function BulkAdd() {
                 raw: {item.rawMatch}
               </div>
               <div>
-                {item.type} • ⭐ {item.rating ?? "N/A"} • seasons{" "}
+                {item.isAnime ? "anime" : item.type} • ⭐ {item.rating ?? "N/A"} • seasons{" "}
                 {item.totalSeasons}
               </div>
             </div>

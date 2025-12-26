@@ -24,7 +24,15 @@ export default function Search() {
       try {
         const res = await fetch(url);
         const data = await res.json();
-        setResults(data.results || []);
+        setResults(
+          (data.results || []).map((item) => ({
+          ...item,
+          isAnime:
+            item.media_type === "tv" &&
+            item.genre_ids?.includes(16),
+          }))
+        );
+
       } catch (err) {
         console.error("TMDB error:", err);
       }
@@ -114,6 +122,7 @@ export default function Search() {
       tmdbId: item.id,
       title: item.title || item.name,
       type: item.media_type,
+      isAnime: item.isAnime ?? false,
       poster: item.poster_path,
       rating: item.vote_average,
       status: "not started",
@@ -133,6 +142,7 @@ export default function Search() {
       tmdbId: item.id,
       title: item.title || item.name,
       type: item.media_type,
+      isAnime: item.isAnime ?? false,
       poster: item.poster_path,
       rating: item.vote_average,
       status: "completed",
@@ -219,7 +229,8 @@ export default function Search() {
             <div style={{ marginTop: 10 }}>
               <strong>{item.title || item.name}</strong>
               <div style={{ opacity: 0.65 }}>
-                ⭐ {item.vote_average.toFixed(1)}
+                {item.isAnime ? "Anime" : item.media_type.toUpperCase()} • ⭐{" "}
+                {item.vote_average.toFixed(1)}
               </div>
             </div>
           </div>

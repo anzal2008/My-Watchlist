@@ -7,6 +7,7 @@ import Watchlist from "./Watchlist";
 import Watched from "./Watched";
 import BulkAdd from "./BulkAdd";
 import NavBar from "./Navbar";
+import Details from "./Details";
 
 import { ThemeProvider } from "./ThemeContext";
 import ProtectedRoute from "./ProtectedRoute";
@@ -22,7 +23,7 @@ export default function App() {
         {/* Public routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-
+        <Route path="/details/:id" element={<Details/>} />
         {/* Protected routes */}
         <Route
           path="/"
@@ -65,7 +66,6 @@ export default function App() {
           }
         />
 
-        {/* Fallback */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </ThemeProvider>

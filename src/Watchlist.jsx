@@ -1,17 +1,8 @@
-// Watchlist.jsx
 import React, { useEffect, useState, useContext } from "react";
 import { ThemeContext } from "./ThemeContext";
 import { db } from "./firebase";
-import {
-  collection,
-  onSnapshot,
-  doc,
-  updateDoc,
-  deleteDoc,
-  setDoc,
-} from "firebase/firestore";
-
-/* ---------- PALETTE (MATCHES LOGIN / SIGNUP / NAV) ---------- */
+import {collection,onSnapshot,doc,updateDoc,deleteDoc,setDoc,} from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 
 const palette = (theme) => ({
   bg: theme === "dark"
@@ -45,13 +36,12 @@ const palette = (theme) => ({
 export default function Watchlist() {
   const { theme } = useContext(ThemeContext);
   const colors = palette(theme);
+  const navigate = useNavigate();
 
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState("all");
   const [hoverId, setHoverId] = useState(null);
   const [hoverCard, setHoverCard] = useState(null);
-
-  /* ---------- DATA ---------- */
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "watchlist"), (snapshot) => {
@@ -64,11 +54,9 @@ export default function Watchlist() {
     if (filter === "all") return true;
     if (filter === "movie") return item.type === "movie";
     if (filter === "tv") return item.type === "tv";
-    if (filter === "anime") return item.category === "anime";
+    if (filter === "anime") return item.isAnime === true;
     return true;
   });
-
-  /* ---------- ACTIONS ---------- */
 
   const updateSeasons = async (item, value) => {
     await updateDoc(doc(db, "watchlist", item.id), {
@@ -99,7 +87,6 @@ export default function Watchlist() {
     await deleteDoc(doc(db, "watchlist", item.id));
   };
 
-  /* ---------- STYLES ---------- */
 
   const cardStyle = (active) => ({
     background: colors.card,
@@ -130,8 +117,6 @@ export default function Watchlist() {
     transition: "opacity 0.2s ease, transform 0.2s ease",
     boxShadow: "0 4px 12px oklch(0% 0 0 / 0.4)",
   });
-
-  /* ---------- RENDER ---------- */
 
   return (
     <div
@@ -185,7 +170,8 @@ export default function Watchlist() {
                 <img
                   src={`https://image.tmdb.org/t/p/w300${item.poster}`}
                   alt={item.title}
-                  style={{ width: "100%", display: "block" }}
+                  style={{ width: "100%", display: "block", cursor: "pointer" }}
+                  onClick={() => navigate(`/details/${item.id}`)}
                 />
               ) : (
                 <div
@@ -227,7 +213,13 @@ export default function Watchlist() {
             <div style={{ marginTop: 8, fontSize: 14, color: colors.textMuted }}>
               <strong style={{ color: colors.text }}>{item.title}</strong>
               <div>⭐ {item.rating}</div>
-              <div>{item.type === "movie" ? "Movie" : "TV Show"}</div>
+              <div>
+                {item.isAnime 
+                  ? "Anime"
+                  : item.type === "movie"
+                  ? "Movie"
+                  : "TV show"}
+                </div>
 
               {item.type === "tv" && (
                 <div>

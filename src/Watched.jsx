@@ -2,6 +2,7 @@ import React, { useEffect, useState, useContext } from "react";
 import { ThemeContext } from "./ThemeContext";
 import { db } from "./firebase";
 import { collection, onSnapshot, doc, deleteDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 
 const palette = (theme) => ({
   bg: theme === "dark" ? "oklch(0.15 0.025 264)" : "oklch(0.96 0.005 264)",
@@ -18,6 +19,7 @@ export default function Watched() {
   const [filter, setFilter] = useState("all");
   const [hoverId, setHoverId] = useState(null);
   const colors = palette(theme);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "watched"), (snapshot) => {
@@ -31,8 +33,7 @@ export default function Watched() {
       if (filter === "all") return true;
       if (filter === "movie") return item.type === "movie";
       if (filter === "tv") return item.type === "tv";
-      if (filter === "anime") return item.category === "anime";
-      return true;
+      if (filter === "anime") return item.isAnime === true;
     })
     .sort((a, b) => (b.finishedAt || 0) - (a.finishedAt || 0));
 
@@ -145,6 +146,7 @@ export default function Watched() {
                   src={`https://image.tmdb.org/t/p/w300${item.poster}`}
                   alt={item.title}
                   style={styles.poster}
+                  onClick={() => navigate(`/details/${item.id}`)}
                 />
               ) : (
                 <div style={styles.placeholder} />
@@ -157,6 +159,7 @@ export default function Watched() {
                   title="Remove"
                 >
                   ❌
+            
                 </button>
               </div>
             </div>
@@ -164,7 +167,13 @@ export default function Watched() {
             <div style={styles.info}>
               <strong>{item.title}</strong>
               <div>⭐ {item.rating}</div>
-              <div>{item.type === "movie" ? "Movie" : "TV Show"}</div>
+              <div>
+                {item.isAnime
+                  ? "Anime"
+                  : item.type === "movie"
+                  ? "Movie"
+                  : "TV Show"}
+              </div>
               <div>
                 Finished:{" "}
                 {item.finishedAt
