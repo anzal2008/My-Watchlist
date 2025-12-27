@@ -4,6 +4,25 @@ import { db } from "./firebase";
 import { collection, onSnapshot, doc, deleteDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 
+const Toast = ({ message }) => (
+  <div
+    style={{
+      position: "fixed",
+      bottom: 24,
+      right: 24,
+      padding: "12px 20px",
+      background: "linear-gradient(135deg, oklch(0.76 0.1 84), oklch(0.6 0.1 200))",
+      color: "white",
+      borderRadius: 8,
+      boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+      zIndex: 9999,
+      opacity: 0.95,
+    }}
+  >
+    {message}
+  </div>
+);
+
 const palette = (theme) => ({
   bg: theme === "dark" ? "oklch(0.15 0.025 264)" : "oklch(0.96 0.005 264)",
   card: theme === "dark" ? "oklch(0.22 0.02 264)" : "oklch(0.99 0.005 264)",
@@ -15,11 +34,13 @@ const palette = (theme) => ({
 
 export default function Watched() {
   const { theme } = useContext(ThemeContext);
+  const colors = palette(theme);
+  const navigate = useNavigate();
+
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState("all");
   const [hoverId, setHoverId] = useState(null);
-  const colors = palette(theme);
-  const navigate = useNavigate();
+  const [toast, setToast] = useState({ visible: false, message: "" });
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "watched"), (snapshot) => {
@@ -34,33 +55,19 @@ export default function Watched() {
       if (filter === "movie") return item.type === "movie";
       if (filter === "tv") return item.type === "tv";
       if (filter === "anime") return item.isAnime === true;
+      return false;
     })
     .sort((a, b) => (b.finishedAt || 0) - (a.finishedAt || 0));
 
+  const showToast = (message) => {
+    setToast({ visible: true, message });
+    setTimeout(() => setToast({ visible: false, message: "" }), 2000);
+  };
+
   const removeWatched = async (item) => {
     await deleteDoc(doc(db, "watched", item.id));
+    showToast(`${item.title} removed from watched list!`);
   };
-
-  const actionContainer = {
-    position: "absolute",
-    bottom: 8,
-    right: 8,
-    zIndex: 2,
-  };
-
-  const iconButton = (active) => ({
-    width: 36,
-    height: 36,
-    borderRadius: "50%",
-    border: "none",
-    background: colors.danger,
-    color: "white",
-    cursor: "pointer",
-    opacity: active ? 1 : 0.3,
-    transform: active ? "scale(1)" : "scale(0.9)",
-    transition: "opacity 0.2s ease, transform 0.2s ease",
-    boxShadow: "0 4px 12px oklch(0% 0 0 / 0.4)",
-  });
 
   const styles = {
     page: {
@@ -68,10 +75,9 @@ export default function Watched() {
       minHeight: "100vh",
       background: colors.bg,
       color: colors.text,
+      position: "relative",
     },
-    header: {
-      marginBottom: 20,
-    },
+    header: { marginBottom: 20 },
     select: {
       marginBottom: 20,
       padding: 6,
@@ -85,23 +91,10 @@ export default function Watched() {
       gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
       gap: 20,
     },
-    posterWrap: {
-      position: "relative",
-    },
-    poster: {
-      width: "100%",
-      borderRadius: 8,
-    },
-    placeholder: {
-      width: "100%",
-      height: 250,
-      background: colors.bg,
-      borderRadius: 8,
-    },
-    info: {
-      marginTop: 8,
-      fontSize: 14,
-    },
+    posterWrap: { position: "relative" },
+    poster: { width: "100%", borderRadius: 8, cursor: "pointer" },
+    placeholder: { width: "100%", height: 250, background: colors.bg, borderRadius: 8 },
+    info: { marginTop: 8, fontSize: 14 },
     card: (active) => ({
       background: colors.card,
       borderRadius: 14,
@@ -112,6 +105,20 @@ export default function Watched() {
         : "0 10px 30px oklch(0% 0 0 / 0.25)",
       transform: active ? "translateY(-4px)" : "translateY(0)",
       transition: "all 0.25s ease",
+    }),
+    actionContainer: { position: "absolute", bottom: 8, right: 8, zIndex: 2 },
+    iconButton: (active) => ({
+      width: 36,
+      height: 36,
+      borderRadius: "50%",
+      border: "none",
+      background: colors.danger,
+      color: "white",
+      cursor: "pointer",
+      opacity: active ? 1 : 0.3,
+      transform: active ? "scale(1)" : "scale(0.9)",
+      transition: "opacity 0.2s ease, transform 0.2s ease",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
     }),
   };
 
@@ -146,20 +153,21 @@ export default function Watched() {
                   src={`https://image.tmdb.org/t/p/w300${item.poster}`}
                   alt={item.title}
                   style={styles.poster}
-                  onClick={() => navigate(`/details/${item.id}`)}
+                  onClick={() =>
+                    navigate(`/details/${item.type}/${item.tmdbId || item.id}`)
+                  }
                 />
               ) : (
                 <div style={styles.placeholder} />
               )}
 
-              <div style={actionContainer}>
+              <div style={styles.actionContainer}>
                 <button
-                  style={iconButton(hoverId === item.id)}
+                  style={styles.iconButton(hoverId === item.id)}
                   onClick={() => removeWatched(item)}
                   title="Remove"
                 >
                   ❌
-            
                 </button>
               </div>
             </div>
@@ -184,6 +192,8 @@ export default function Watched() {
           </div>
         ))}
       </div>
+
+      {toast.visible && <Toast message={toast.message} />}
     </div>
   );
 }

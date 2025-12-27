@@ -1,16 +1,37 @@
 import React, { useContext, useEffect, useState } from "react";
 import { db } from "./firebase";
 import { doc, setDoc, getDoc, deleteDoc } from "firebase/firestore";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ThemeContext } from "./ThemeContext";
+
+const Toast = ({ message }) => (
+  <div
+    style={{
+      position: "fixed",
+      bottom: 24,
+      right: 24,
+      padding: "12px 20px",
+      background: "linear-gradient(135deg, oklch(0.76 0.1 84), oklch(0.6 0.1 200))",
+      color: "white",
+      borderRadius: 8,
+      boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+      zIndex: 9999,
+      opacity: 0.95,
+    }}
+  >
+    {message}
+  </div>
+);
 
 export default function Search() {
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q");
   const { theme } = useContext(ThemeContext);
+  const navigate = useNavigate();
 
   const [results, setResults] = useState([]);
   const [hoveredId, setHoveredId] = useState(null);
+  const [toast, setToast] = useState({ visible: false, message: "" });
 
   useEffect(() => {
     if (!query) return;
@@ -26,13 +47,10 @@ export default function Search() {
         const data = await res.json();
         setResults(
           (data.results || []).map((item) => ({
-          ...item,
-          isAnime:
-            item.media_type === "tv" &&
-            item.genre_ids?.includes(16),
+            ...item,
+            isAnime: item.media_type === "tv" && item.genre_ids?.includes(16),
           }))
         );
-
       } catch (err) {
         console.error("TMDB error:", err);
       }
@@ -41,46 +59,70 @@ export default function Search() {
     fetchResults();
   }, [query]);
 
-  /* ---------- STYLES ---------- */
+  const showToast = (message) => {
+    setToast({ visible: true, message });
+    setTimeout(() => setToast({ visible: false, message: "" }), 2000);
+  };
+
+  const addToWatchlist = async (item) => {
+    const ref = doc(db, "watchlist", String(item.id));
+    const snap = await getDoc(ref);
+    if (snap.exists()) return showToast("Already in watchlist");
+
+    await setDoc(ref, {
+      tmdbId: item.id,
+      title: item.title || item.name,
+      type: item.media_type,
+      isAnime: item.isAnime ?? false,
+      poster: item.poster_path,
+      rating: item.vote_average,
+      status: "not started",
+      lastChecked: Date.now(),
+    });
+
+    showToast(`Added "${item.title || item.name}" to watchlist`);
+  };
+
+  const markAsWatched = async (item) => {
+    const ref = doc(db, "watched", String(item.id));
+    const snap = await getDoc(ref);
+    if (snap.exists()) return showToast("Already marked as watched");
+
+    await setDoc(ref, {
+      tmdbId: item.id,
+      title: item.title || item.name,
+      type: item.media_type,
+      isAnime: item.isAnime ?? false,
+      poster: item.poster_path,
+      rating: item.vote_average,
+      status: "completed",
+      finishedAt: Date.now(),
+    });
+
+    await deleteDoc(doc(db, "watchlist", String(item.id)));
+    showToast(`Marked "${item.title || item.name}" as watched`);
+  };
 
   const pageStyle = {
     padding: 24,
-    background:
-      theme === "dark"
-        ? "oklch(14% 0.01 250)"
-        : "oklch(98% 0.01 250)",
+    background: theme === "dark" ? "oklch(14% 0.01 250)" : "oklch(98% 0.01 250)",
     color: theme === "dark" ? "white" : "black",
     minHeight: "100vh",
   };
 
   const cardStyle = {
-    background:
-      theme === "dark"
-        ? "oklch(22% 0.015 250)"
-        : "oklch(96% 0.01 250)",
+    background: theme === "dark" ? "oklch(22% 0.015 250)" : "oklch(96% 0.01 250)",
     borderRadius: 18,
     padding: 12,
-    boxShadow:
-      theme === "dark"
-        ? "0 8px 24px rgba(0,0,0,0.4)"
-        : "0 8px 24px rgba(0,0,0,0.08)",
+    boxShadow: theme === "dark"
+      ? "0 8px 24px rgba(0,0,0,0.4)"
+      : "0 8px 24px rgba(0,0,0,0.08)",
     transition: "transform 0.2s ease, box-shadow 0.2s ease",
   };
 
-  const posterStyle = {
-    width: "100%",
-    borderRadius: 12,
-    display: "block",
-  };
+  const posterStyle = { width: "100%", borderRadius: 12, display: "block", cursor: "pointer" };
 
-  const actionContainer = {
-    position: "absolute",
-    bottom: 10,
-    right: 10,
-    display: "flex",
-    gap: 8,
-    zIndex: 3,
-  };
+  const actionContainer = { position: "absolute", bottom: 10, right: 10, display: "flex", gap: 8, zIndex: 3 };
 
   const iconButton = (visible, bg) => ({
     width: 36,
@@ -100,72 +142,15 @@ export default function Search() {
     boxShadow: "0 4px 10px rgba(0,0,0,0.4)",
   });
 
-  /* ---------- DATA ---------- */
-
   const filteredResults = results
-    .filter(
-      (item) =>
-        (item.media_type === "movie" || item.media_type === "tv") &&
-        item.vote_average > 0
-    )
+    .filter(item => (item.media_type === "movie" || item.media_type === "tv") && item.vote_average > 0)
     .sort((a, b) => b.vote_average * b.popularity - a.vote_average * a.popularity);
-
-  /* ---------- ACTIONS ---------- */
-
-  const addToWatchlist = async (item) => {
-    const ref = doc(db, "watchlist", String(item.id));
-    const snap = await getDoc(ref);
-
-    if (snap.exists()) return alert("Already in watchlist");
-
-    await setDoc(ref, {
-      tmdbId: item.id,
-      title: item.title || item.name,
-      type: item.media_type,
-      isAnime: item.isAnime ?? false,
-      poster: item.poster_path,
-      rating: item.vote_average,
-      status: "not started",
-      lastChecked: Date.now(),
-    });
-
-    alert(`Added "${item.title || item.name}" to watchlist`);
-  };
-
-  const markAsWatched = async (item) => {
-    const ref = doc(db, "watched", String(item.id));
-    const snap = await getDoc(ref);
-
-    if (snap.exists()) return alert("Already marked as watched");
-
-    await setDoc(ref, {
-      tmdbId: item.id,
-      title: item.title || item.name,
-      type: item.media_type,
-      isAnime: item.isAnime ?? false,
-      poster: item.poster_path,
-      rating: item.vote_average,
-      status: "completed",
-      finishedAt: Date.now(),
-    });
-
-    await deleteDoc(doc(db, "watchlist", String(item.id)));
-    alert(`Marked "${item.title || item.name}" as watched`);
-  };
-
-  /* ---------- RENDER ---------- */
 
   return (
     <div style={pageStyle}>
       <h2 style={{ marginBottom: 20 }}>Results for “{query}”</h2>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-          gap: 24,
-        }}
-      >
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 24 }}>
         {filteredResults.map((item, index) => (
           <div
             key={item.id}
@@ -175,22 +160,18 @@ export default function Search() {
           >
             <div style={{ position: "relative" }}>
               {index === 0 && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 8,
-                    left: 8,
-                    background: "oklch(85% 0.16 85)",
-                    color: "black",
-                    fontSize: 12,
-                    fontWeight: "bold",
-                    padding: "4px 10px",
-                    borderRadius: 999,
-                    zIndex: 2,
-                  }}
-                >
-                  ⭐ Top
-                </div>
+                <div style={{
+                  position: "absolute",
+                  top: 8,
+                  left: 8,
+                  background: "oklch(85% 0.16 85)",
+                  color: "black",
+                  fontSize: 12,
+                  fontWeight: "bold",
+                  padding: "4px 10px",
+                  borderRadius: 999,
+                  zIndex: 2,
+                }}>⭐ Top</div>
               )}
 
               {item.poster_path && (
@@ -198,44 +179,36 @@ export default function Search() {
                   src={`https://image.tmdb.org/t/p/w300${item.poster_path}`}
                   alt={item.title || item.name}
                   style={posterStyle}
+                  onClick={() => navigate(`/details/${item.media_type}/${item.id}`)}
                 />
               )}
 
               <div style={actionContainer}>
                 <button
-                  style={iconButton(
-                    hoveredId === item.id,
-                    "oklch(55% 0.18 260)"
-                  )}
+                  style={iconButton(hoveredId === item.id, "oklch(55% 0.18 260)")}
                   onClick={() => addToWatchlist(item)}
                   title="Add to Watchlist"
-                >
-                  ➕
-                </button>
+                >➕</button>
 
                 <button
-                  style={iconButton(
-                    hoveredId === item.id,
-                    "oklch(60% 0.18 145)"
-                  )}
+                 style={iconButton(hoveredId === item.id, "oklch(60% 0.18 145)")}
                   onClick={() => markAsWatched(item)}
                   title="Mark as Watched"
-                >
-                  ✓
-                </button>
+                >✓</button>
               </div>
             </div>
 
             <div style={{ marginTop: 10 }}>
               <strong>{item.title || item.name}</strong>
               <div style={{ opacity: 0.65 }}>
-                {item.isAnime ? "Anime" : item.media_type.toUpperCase()} • ⭐{" "}
-                {item.vote_average.toFixed(1)}
+                {item.isAnime ? "Anime" : item.media_type.toUpperCase()} • ⭐ {item.vote_average.toFixed(1)}
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      {toast.visible && <Toast message={toast.message} />}
     </div>
   );
 }

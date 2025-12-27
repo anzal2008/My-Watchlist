@@ -20,11 +20,10 @@ export default function App() {
       <NavBar />
 
       <Routes>
-        {/* Public routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/details/:id" element={<Details/>} />
-        {/* Protected routes */}
+        <Route path="/details/:type/:id" element={<Details />} />
+
         <Route
           path="/"
           element={
