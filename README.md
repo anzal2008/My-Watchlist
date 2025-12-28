@@ -1,16 +1,57 @@
-# React + Vite
+# My Watchlist
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Welcome to **My Watchlist**, your personal app to track movies, TV shows, and anime that you've watched or want to watch. Keep everything organized, rate your favorites, and easily add new titles in bulk!
 
-Currently, two official plugins are available:
+**Access the app here:** [https://myy-watchlist.vercel.app](https://myy-watchlist.vercel.app)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
+## How to Use
 
-## React Compiler
+1. **Open the app**: Go to [https://myy-watchlist.vercel.app](https://myy-watchlist.vercel.app)
+2. **Sign up or log in**.
+3. **Add titles**: Use the search bar to add one by one or use the bulk add feature for multiple items at once.
+4. **Track your progress**: Mark items as watched and assign your rating.
+5. **View your top-rated content**: Toggle the "Rating" option to sort by highest stars.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Features
 
-## Expanding the ESLint configuration
+### 1. Sign Up / Log In
+- Create an account to keep your watchlist private and synced.
+- Login allows you to continue tracking from any device.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 2. Watchlist Management
+- **Add items**: Add movies, TV shows, or anime to your watchlist.
+- **Bulk Add**: Paste a list of titles, and the app will intelligently detect and add each item.
+- **Remove items**: Remove any watched or unwanted titles from your list.
+
+### 3. Tracking & Rating
+- **Mark as watched**: Keep track of what you've already seen.
+- **Rate titles**: Give a rating (stars) for each movie, show, or anime.
+- **Highest Rated View**: Sort your watchlist to see your top-rated titles first.
+
+### 4. Filtering
+- Filter by **Movie**, **TV Show**, or **Anime**.
+- Combine filters with sorting by rating to see your favorite anime or movies first.
+
+### 5. Responsive Design
+- Works beautifully on **desktop and mobile**.
+- Adaptive layout ensures a seamless experience on any device.
+
+---
+
+## Tech Stack
+
+- **Frontend**: React, Vite
+- **Backend / Database**: Firebase Firestore
+- **Deployment**: Vercel
+- **APIs**: The Movie Database (TMDb)
+
+---
+
+## Notes
+
+- **No duplicates**: The app prevents adding duplicate entries to your watchlist.
+
+---
+
+Enjoy tracking all your favorite movies, TV shows, and anime with ease! 🎬🍿
