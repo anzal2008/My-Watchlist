@@ -1,7 +1,7 @@
 import React, { useContext, useState } from "react";
 import { ThemeContext } from "./ThemeContext";
 import { db } from "./firebase";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 
 const palette = (theme) => ({
@@ -17,16 +17,18 @@ const palette = (theme) => ({
 export default function BulkAdd() {
   const { theme } = useContext(ThemeContext);
   const colors = palette(theme);
+  const navigate = useNavigate();
 
   const [input, setInput] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [addingAll, setAddingAll] = useState(false);
   const [toast, setToast] = useState(null);
-  const [progress,setProgress] = useState(0);
-  const navigate = useNavigate();
+  const [progress, setProgress] = useState(0);
 
   const apiKey = "3f3a43be23e6ffc9e3acb7fd43f7eea7";
 
+  // ---------- UTILS ----------
   const normalize = (s = "") =>
     s
       .toLowerCase()
@@ -63,6 +65,7 @@ export default function BulkAdd() {
   const distanceRatio = (a, b) =>
     levenshtein(a, b) / Math.max(normalize(a).length, normalize(b).length, 1);
 
+  // ---------- TMDB SEARCH ----------
   async function tmdbSearch(query) {
     const q = encodeURIComponent(query);
     const urls = [
@@ -128,14 +131,12 @@ export default function BulkAdd() {
       }
 
       if (matched) {
-      const isAnime = matched_type === "tv" &&
-      matched.genre_ids?.includes(16);
+        const isAnime = matched.media_type === "tv" && matched.genre_ids?.includes(16);
         found.push({
           id: matched.id,
           title: matched.title || matched.name,
           poster: matched.poster_path,
           rating: matched.vote_average ?? null,
-
           type: matched.media_type === "tv" ? "tv" : "movie",
           isAnime,
           totalSeasons:
@@ -146,7 +147,6 @@ export default function BulkAdd() {
           status: "not started",
         });
         i += spanUsed;
-        if(i % 2 === 0) setProgress(Math.round((i/total)*100));
       } else {
         found.push({
           id: null,
@@ -159,9 +159,9 @@ export default function BulkAdd() {
           status: "not found",
         });
         i += 1;
-        if(i % 2 === 0) setProgress(Math.round((i/total)*100));
-
       }
+
+      if (i % 2 === 0) setProgress(Math.round((i / total) * 100));
     }
 
     return found;
@@ -172,14 +172,22 @@ export default function BulkAdd() {
     setLoading(true);
     setProgress(0);
     setResults([]);
-    
     const resolved = await greedyScanAndResolve(input);
     setResults(resolved);
     setLoading(false);
     setProgress(100);
   };
 
+  // ---------- FIRESTORE ----------
+  const alreadyExists = async (item) => {
+    if (!item.id) return false;
+    const q = query(collection(db, "watchlist"), where("tmdbId", "==", item.id));
+    const snapshot = await getDocs(q);
+    return !snapshot.empty;
+  };
+
   const addItem = async (item) => {
+    if (await alreadyExists(item)) return;
     await addDoc(collection(db, "watchlist"), {
       tmdbId: item.id,
       title: item.title,
@@ -195,47 +203,22 @@ export default function BulkAdd() {
   };
 
   const addAll = async () => {
+    if (addingAll) return;
+    setAddingAll(true);
     for (const item of results) {
       if (item.id) await addItem(item);
     }
     setToast("All items added successfully!");
     setTimeout(() => setToast(null), 2500);
+    setAddingAll(false);
   };
 
+  // ---------- STYLES ----------
   const styles = {
-    page: {
-      minHeight: "100vh",
-      padding: 20,
-      background: colors.bg,
-      color: colors.text,
-    },
-    textarea: {
-      width: "100%",
-      minHeight: 140,
-      padding: 12,
-      borderRadius: 10,
-      border: `1px solid ${colors.border}`,
-      background: colors.surface,
-      color: colors.text,
-    },
-    card: {
-      display: "flex",
-      gap: 14,
-      padding: 14,
-      background: colors.surface,
-      borderRadius: 14,
-      border: `1px solid ${colors.border}`,
-      boxShadow: "0 12px 30px oklch(0% 0 0 / 0.25)",
-      marginBottom: 14,
-    },
-    button: {
-      padding: "8px 14px",
-      borderRadius: 10,
-      border: "none",
-      background: colors.primary,
-      color: "white",
-      cursor: "pointer",
-    },
+    page: { minHeight: "100vh", padding: 20, background: colors.bg, color: colors.text },
+    textarea: { width: "100%", minHeight: 140, padding: 12, borderRadius: 10, border: `1px solid ${colors.border}`, background: colors.surface, color: colors.text },
+    card: { display: "flex", gap: 14, padding: 14, background: colors.surface, borderRadius: 14, border: `1px solid ${colors.border}`, boxShadow: "0 12px 30px oklch(0% 0 0 / 0.25)", marginBottom: 14 },
+    button: { padding: "8px 14px", borderRadius: 10, border: "none", background: colors.primary, color: "white", cursor: "pointer" },
   };
 
   return (
@@ -256,14 +239,11 @@ export default function BulkAdd() {
 
         {results.length > 0 && (
           <button
-            style={{
-              ...styles.button,
-              marginLeft: 10,
-              background: colors.success,
-            }}
+            style={{ ...styles.button, marginLeft: 10, background: colors.success }}
             onClick={addAll}
+            disabled={addingAll}
           >
-            Add All
+            {addingAll ? "Adding..." : "Add All"}
           </button>
         )}
       </div>
@@ -279,65 +259,26 @@ export default function BulkAdd() {
                 onClick={() => navigate(`/details/${item.id}`)}
               />
             ) : (
-              <div
-                style={{
-                  width: 80,
-                  height: 120,
-                  background: colors.border,
-                  borderRadius: 10,
-                }}
-              />
+              <div style={{ width: 80, height: 120, background: colors.border, borderRadius: 10 }} />
             )}
 
             <div style={{ flex: 1 }}>
               <strong>{item.title}</strong>
-              <div style={{ color: colors.muted, fontSize: 13 }}>
-                raw: {item.rawMatch}
-              </div>
-              <div>
-                {item.isAnime ? "anime" : item.type} • ⭐ {item.rating ?? "N/A"} • seasons{" "}
-                {item.totalSeasons}
-              </div>
+              <div style={{ color: colors.muted, fontSize: 13 }}>raw: {item.rawMatch}</div>
+              <div>{item.isAnime ? "anime" : item.type} • ⭐ {item.rating ?? "N/A"} • seasons {item.totalSeasons}</div>
             </div>
           </div>
         ))}
       </div>
+
       {loading && (
-        <div
-          style={{
-            margingTop: 16,
-            height: 10,
-            width: "100%",
-            background: colors.border,
-            borderRadius: 999,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              height: "100%",
-              width: `${progress}%`,
-              background: "oklch(0.45 0.12 255)",
-              transition: "width 0.25s ease"
-            }}
-          />
+        <div style={{ marginTop: 16, height: 10, width: "100%", background: colors.border, borderRadius: 999, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${progress}%`, background: "oklch(0.45 0.12 255)", transition: "width 0.25s ease" }} />
         </div>
       )}
+
       {toast && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 24,
-            right: 24,
-            background: "oklch(0.7 0.05 260)",
-            color: "white",
-            padding: "12px 18px",
-            borderRadius: 14,
-            boxShadow: "0 20px 40px oklch(0% 0 0 / 0.4)",
-            fontWeight: 500,
-            zIndex: 9999,
-          }}
-        >
+        <div style={{ position: "fixed", bottom: 24, right: 24, background: "oklch(0.7 0.05 260)", color: "white", padding: "12px 18px", borderRadius: 14, boxShadow: "0 20px 40px oklch(0% 0 0 / 0.4)", fontWeight: 500, zIndex: 9999 }}>
           {toast}
         </div>
       )}

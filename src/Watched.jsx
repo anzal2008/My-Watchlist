@@ -8,15 +8,15 @@ const Toast = ({ message }) => (
   <div
     style={{
       position: "fixed",
-      bottom: 24,
-      right: 24,
+      bottom: 20,
+      left: "50%",
+      transform: "translateX(-50%)",
       padding: "12px 20px",
       background: "linear-gradient(135deg, oklch(0.76 0.1 84), oklch(0.6 0.1 200))",
       color: "white",
-      borderRadius: 8,
-      boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+      borderRadius: 10,
+      boxShadow: "0 6px 20px rgba(0,0,0,0.35)",
       zIndex: 9999,
-      opacity: 0.95,
     }}
   >
     {message}
@@ -25,10 +25,10 @@ const Toast = ({ message }) => (
 
 const palette = (theme) => ({
   bg: theme === "dark" ? "oklch(0.15 0.025 264)" : "oklch(0.96 0.005 264)",
-  card: theme === "dark" ? "oklch(0.22 0.02 264)" : "oklch(0.99 0.005 264)",
-  border: theme === "dark" ? "oklch(0.28 0.03 264)" : "oklch(0.85 0.02 264)",
-  text: theme === "dark" ? "oklch(0.96 0.05 264)" : "oklch(0.15 0.05 264)",
-  textMuted: theme === "dark" ? "oklch(0.75 0.04 264)" : "oklch(0.45 0.03 264)",
+  card: theme === "dark" ? "oklch(0.22 0.02 264)" : "white",
+  border: theme === "dark" ? "oklch(0.28 0.03 264)" : "#e5e7eb",
+  text: theme === "dark" ? "white" : "black",
+  textMuted: theme === "dark" ? "rgba(255,255,255,0.7)" : "#555",
   danger: "oklch(0.6 0.15 25)",
 });
 
@@ -36,164 +36,177 @@ export default function Watched() {
   const { theme } = useContext(ThemeContext);
   const colors = palette(theme);
   const navigate = useNavigate();
+  const isMobile = window.innerWidth <= 768;
 
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState("all");
   const [hoverId, setHoverId] = useState(null);
-  const [toast, setToast] = useState({ visible: false, message: "" });
+  const [toast, setToast] = useState(null);
+  const [sortByRating, setSortByRating] = useState(false);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "watched"), (snapshot) => {
-      setItems(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+    const unsub = onSnapshot(collection(db, "watched"), (snap) => {
+      setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
     return () => unsub();
   }, []);
 
-  const filteredItems = items
-    .filter((item) => {
-      if (filter === "all") return true;
-      if (filter === "movie") return item.type === "movie";
-      if (filter === "tv") return item.type === "tv";
-      if (filter === "anime") return item.isAnime === true;
-      return false;
-    })
-    .sort((a, b) => (b.finishedAt || 0) - (a.finishedAt || 0));
-
-  const showToast = (message) => {
-    setToast({ visible: true, message });
-    setTimeout(() => setToast({ visible: false, message: "" }), 2000);
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2000);
   };
 
   const removeWatched = async (item) => {
     await deleteDoc(doc(db, "watched", item.id));
-    showToast(`${item.title} removed from watched list!`);
+    showToast(`${item.title} removed`);
   };
 
-  const styles = {
-    page: {
-      padding: 20,
-      minHeight: "100vh",
-      background: colors.bg,
-      color: colors.text,
-      position: "relative",
-    },
-    header: { marginBottom: 20 },
-    select: {
-      marginBottom: 20,
-      padding: 6,
-      background: colors.bg,
-      color: colors.text,
-      border: `1px solid ${colors.border}`,
-      borderRadius: 6,
-    },
-    grid: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-      gap: 20,
-    },
-    posterWrap: { position: "relative" },
-    poster: { width: "100%", borderRadius: 8, cursor: "pointer" },
-    placeholder: { width: "100%", height: 250, background: colors.bg, borderRadius: 8 },
-    info: { marginTop: 8, fontSize: 14 },
-    card: (active) => ({
-      background: colors.card,
-      borderRadius: 14,
-      padding: 10,
-      border: `1px solid ${colors.border}`,
-      boxShadow: active
-        ? "0 16px 40px oklch(0% 0 0 / 0.45)"
-        : "0 10px 30px oklch(0% 0 0 / 0.25)",
-      transform: active ? "translateY(-4px)" : "translateY(0)",
-      transition: "all 0.25s ease",
-    }),
-    actionContainer: { position: "absolute", bottom: 8, right: 8, zIndex: 2 },
-    iconButton: (active) => ({
-      width: 36,
-      height: 36,
-      borderRadius: "50%",
-      border: "none",
-      background: colors.danger,
-      color: "white",
-      cursor: "pointer",
-      opacity: active ? 1 : 0.3,
-      transform: active ? "scale(1)" : "scale(0.9)",
-      transition: "opacity 0.2s ease, transform 0.2s ease",
-      boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
-    }),
-  };
+  const filteredItems = items
+  .filter((i) =>
+    filter === "all" ? true : filter === "anime" ? i.isAnime : i.type === filter
+  )
+  .sort((a, b) => {
+    if (sortByRating) {
+      const ratingA = a.rating || 0;
+      const ratingB = b.rating || 0;
+      return ratingB - ratingA; // highest rating first, 0s naturally go last
+    }
+    return (b.finishedAt || 0) - (a.finishedAt || 0);
+  });
+
 
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
-        <h2>Watched</h2>
+    <div
+      style={{
+        minHeight: "100vh",
+        padding: isMobile ? 14 : 20,
+        background: colors.bg,
+        color: colors.text,
+      }}
+    >
+      <h2 style={{ marginBottom: 12 }}>Watched</h2>
+
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 10,
+          alignItems: "center",
+          marginBottom: 20,
+        }}
+      >
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          style={{
+            padding: 8,
+            borderRadius: 8,
+            border: `1px solid ${colors.border}`,
+            background: colors.card,
+            color: colors.text,
+            width: isMobile ? "100%" : "auto",
+          }}
+        >
+          <option value="all">All</option>
+          <option value="movie">Movies</option>
+          <option value="tv">TV Shows</option>
+          <option value="anime">Anime</option>
+        </select>
+
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            cursor: "pointer",
+            userSelect: "none",
+            color: colors.text,
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={sortByRating}
+            onChange={(e) => setSortByRating(e.target.checked)}
+          />
+          Rating
+        </label>
       </div>
 
-      <select
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-        style={styles.select}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: isMobile
+            ? "repeat(2, 1fr)"
+            : "repeat(auto-fill, minmax(180px, 1fr))",
+          gap: 16,
+        }}
       >
-        <option value="all">All</option>
-        <option value="movie">Movies</option>
-        <option value="tv">TV Shows</option>
-        <option value="anime">Anime</option>
-      </select>
+        {filteredItems.map((item) => {
+          const active = hoverId === item.id || isMobile;
 
-      <div style={styles.grid}>
-        {filteredItems.map((item) => (
-          <div
-            key={item.id}
-            style={styles.card(hoverId === item.id)}
-            onMouseEnter={() => setHoverId(item.id)}
-            onMouseLeave={() => setHoverId(null)}
-          >
-            <div style={styles.posterWrap}>
-              {item.poster ? (
-                <img
-                  src={`https://image.tmdb.org/t/p/w300${item.poster}`}
-                  alt={item.title}
-                  style={styles.poster}
-                  onClick={() =>
-                    navigate(`/details/${item.type}/${item.tmdbId || item.id}`)
-                  }
-                />
-              ) : (
-                <div style={styles.placeholder} />
-              )}
+          return (
+            <div
+              key={item.id}
+              style={{
+                background: colors.card,
+                border: `1px solid ${colors.border}`,
+                borderRadius: 16,
+                padding: 10,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
+              }}
+              onMouseEnter={() => !isMobile && setHoverId(item.id)}
+              onMouseLeave={() => !isMobile && setHoverId(null)}
+            >
+              <div style={{ position: "relative" }}>
+                {item.poster && (
+                  <img
+                    src={`https://image.tmdb.org/t/p/w300${item.poster}`}
+                    alt={item.title}
+                    style={{
+                      width: "100%",
+                      borderRadius: 12,
+                      cursor: "pointer",
+                    }}
+                    onClick={() =>
+                      navigate(`/details/${item.type}/${item.tmdbId || item.id}`)
+                    }
+                  />
+                )}
 
-              <div style={styles.actionContainer}>
                 <button
-                  style={styles.iconButton(hoverId === item.id)}
                   onClick={() => removeWatched(item)}
-                  title="Remove"
+                  style={{
+                    position: "absolute",
+                    bottom: 8,
+                    right: 8,
+                    width: 36,
+                    height: 36,
+                    borderRadius: "50%",
+                    border: "none",
+                    background: colors.danger,
+                    color: "white",
+                    fontSize: 16,
+                    opacity: active ? 1 : 0,
+                    transition: "opacity 0.2s",
+                  }}
                 >
                   ❌
                 </button>
               </div>
-            </div>
 
-            <div style={styles.info}>
-              <strong>{item.title}</strong>
-              <div>⭐ {item.rating}</div>
-              <div>
-                {item.isAnime
-                  ? "Anime"
-                  : item.type === "movie"
-                  ? "Movie"
-                  : "TV Show"}
-              </div>
-              <div>
-                Finished:{" "}
-                {item.finishedAt
-                  ? new Date(item.finishedAt).toLocaleDateString()
-                  : "—"}
+              <div style={{ marginTop: 8, fontSize: 13 }}>
+                <strong>{item.title}</strong>
+                <div style={{ color: colors.textMuted }}>⭐ {item.rating ?? "—"}</div>
+                <div style={{ color: colors.textMuted }}>
+                  {item.isAnime ? "Anime" : item.type === "movie" ? "Movie" : "TV"}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {toast.visible && <Toast message={toast.message} />}
+      {toast && <Toast message={toast} />}
     </div>
   );
 }

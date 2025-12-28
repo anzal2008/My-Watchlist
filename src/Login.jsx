@@ -7,19 +7,15 @@ import { ThemeContext } from "./ThemeContext";
 const colors = {
   bgLight: "oklch(96% 0.01 260)",
   bgDark: "oklch(18% 0.02 260)",
-
   cardLight: "oklch(99% 0.005 260)",
   cardDark: "oklch(22% 0.02 260)",
-
   inputLight: "oklch(97% 0.01 260)",
   inputDark: "oklch(26% 0.02 260)",
   border: "oklch(70% 0.02 260)",
-
   textLight: "oklch(20% 0.02 260)",
   textDark: "oklch(96% 0.01 260)",
-
   danger: "oklch(62% 0.21 25)",
-  dangerHover: "oklch(58% 0.21 25)"
+  dangerHover: "oklch(58% 0.21 25)",
 };
 
 export default function Login() {
@@ -37,7 +33,7 @@ export default function Login() {
       alert(err.message);
     }
   };
-  
+
   const resetPassword = async () => {
     if (!email) return alert("Enter your email first");
     try {
@@ -53,31 +49,34 @@ export default function Login() {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    padding: "20px", // Added padding for small screens
     background: theme === "dark" ? colors.bgDark : colors.bgLight,
   };
 
   const card = {
-    width: 360,
-    padding: 28,
+    width: "100%",
+    maxWidth: 400, // ensures desktop doesn't stretch too far
+    padding: "28px 20px",
     borderRadius: 12,
     background: theme === "dark" ? colors.cardDark : colors.cardLight,
     color: theme === "dark" ? colors.textDark : colors.textLight,
-    boxShadow: 
+    boxShadow:
       theme === "dark"
         ? "0 10px 30px oklch(0% 0 0 / 0.6)"
-        : "0 10px 30px oklch(0% 0 0 / 0.15",
+        : "0 10px 30px oklch(0% 0 0 / 0.15)",
+    boxSizing: "border-box",
   };
 
   const input = {
     width: "100%",
     padding: "10px 12px",
     borderRadius: 8,
-    border: `"1px solid ${colors.border}`,
+    border: `1px solid ${colors.border}`,
     background: theme === "dark" ? colors.inputDark : colors.inputLight,
     color: theme === "dark" ? colors.textDark : colors.textLight,
     outline: "none",
     fontSize: 14,
-    boxSizing: "border-box", 
+    boxSizing: "border-box",
   };
 
   const button = {
@@ -88,6 +87,7 @@ export default function Login() {
     cursor: "pointer",
     fontWeight: "bold",
     marginTop: 6,
+    fontSize: 14,
   };
 
   const passwordWrapper = {
@@ -105,10 +105,18 @@ export default function Login() {
     userSelect: "none",
   };
 
+  const footerText = {
+    textAlign: "center",
+    marginTop: 16,
+    fontSize: 14,
+  };
+
   return (
     <div style={page}>
       <div style={card}>
-        <h2 style={{ textAlign: "center", marginBottom: 20 }}>Welcome Back</h2>
+        <h2 style={{ textAlign: "center", marginBottom: 20, fontSize: 22 }}>
+          Welcome Back
+        </h2>
 
         <input
           type="email"
@@ -124,9 +132,12 @@ export default function Login() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={{ ...input, paddingRight: 40 }} 
+            style={{ ...input, paddingRight: 40 }}
           />
-          <span style={eyeIcon} onClick={() => setShowPassword(!showPassword)}>
+          <span
+            style={eyeIcon}
+            onClick={() => setShowPassword(!showPassword)}
+          >
             {showPassword ? "🦍" : "👁️"}
           </span>
         </div>
@@ -134,8 +145,12 @@ export default function Login() {
         <button
           onClick={login}
           style={{ ...button, background: colors.danger, color: "white" }}
-          onMouseOver={(e) => (e.currentTarget.style.background = colors.dangerHover)}
-          onMouseOut={(e) => (e.currentTarget.style.background = colors.danger)}
+          onMouseOver={(e) =>
+            (e.currentTarget.style.background = colors.dangerHover)
+          }
+          onMouseOut={(e) =>
+            (e.currentTarget.style.background = colors.danger)
+          }
         >
           Login
         </button>
@@ -145,15 +160,23 @@ export default function Login() {
           style={{
             ...button,
             background: "transparent",
-            color: theme === "dark" ? "oklch(75% 0.02 260)" : "oklch(40% 0.02 260",
+            color:
+              theme === "dark" ? "oklch(75% 0.02 260)" : "oklch(40% 0.02 260)",
           }}
         >
           Forgot password?
         </button>
 
-        <p style={{ textAlign: "center", marginTop: 16 }}>
+        <p style={footerText}>
           Don’t have an account?{" "}
-          <Link to="/signup" style={{ color: colors.danger, textDecoration: "none", fontWeight: 500,}}>
+          <Link
+            to="/signup"
+            style={{
+              color: colors.danger,
+              textDecoration: "none",
+              fontWeight: 500,
+            }}
+          >
             Sign up
           </Link>
         </p>

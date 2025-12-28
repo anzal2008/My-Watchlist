@@ -5,28 +5,12 @@ import { useNavigate, Link } from "react-router-dom";
 import { ThemeContext } from "./ThemeContext";
 
 const palette = (theme) => ({
-  bg: theme === "dark"
-    ? "oklch(0.18 0.02 260)"
-    : "oklch(0.96 0.01 260)",
-
-  card: theme === "dark"
-    ? "oklch(0.22 0.02 260)"
-    : "oklch(0.99 0.005 260)",
-
-  input: theme === "dark"
-    ? "oklch(0.26 0.02 260)"
-    : "oklch(0.97 0.01 260)",
-
-  text: theme === "dark"
-    ? "oklch(0.96 0.01 260)"
-    : "oklch(0.20 0.02 260)",
-
-  textMuted: theme === "dark"
-    ? "oklch(0.75 0.02 260)"
-    : "oklch(0.45 0.02 260)",
-
-  border: theme === "oklch(70% 0.02 260)",
-
+  bg: theme === "dark" ? "oklch(0.18 0.02 260)" : "oklch(0.96 0.01 260)",
+  card: theme === "dark" ? "oklch(0.22 0.02 260)" : "oklch(0.99 0.005 260)",
+  input: theme === "dark" ? "oklch(0.26 0.02 260)" : "oklch(0.97 0.01 260)",
+  text: theme === "dark" ? "oklch(0.96 0.01 260)" : "oklch(0.20 0.02 260)",
+  textMuted: theme === "dark" ? "oklch(0.75 0.02 260)" : "oklch(0.45 0.02 260)",
+  border: "oklch(70% 0.02 260)",
   success: "oklch(0.68 0.18 155)",
   successHover: "oklch(0.62 0.18 155)",
 });
@@ -55,12 +39,14 @@ export default function Signup() {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    padding: "20px", 
     background: colors.bg,
   };
 
   const card = {
-    width: 360,
-    padding: 28,
+    width: "100%",
+    maxWidth: 400,
+    padding: "28px 20px",
     borderRadius: 12,
     background: colors.card,
     color: colors.text,
@@ -68,6 +54,7 @@ export default function Signup() {
       theme === "dark"
         ? "0 10px 30px oklch(0% 0 0 / 0.6)"
         : "0 10px 30px oklch(0% 0 0 / 0.15)",
+    boxSizing: "border-box",
   };
 
   const input = {
@@ -109,12 +96,19 @@ export default function Signup() {
     marginTop: 6,
     background: colors.success,
     color: "white",
+    fontSize: 14,
+  };
+
+  const footerText = {
+    textAlign: "center",
+    marginTop: 16,
+    fontSize: 14,
   };
 
   return (
     <div style={page}>
       <div style={card}>
-        <h2 style={{ textAlign: "center", marginBottom: 20 }}>
+        <h2 style={{ textAlign: "center", marginBottom: 20, fontSize: 22 }}>
           Create Account
         </h2>
 
@@ -145,17 +139,13 @@ export default function Signup() {
         <button
           onClick={signup}
           style={button}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.background = colors.successHover)
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.background = colors.success)
-          }
+          onMouseEnter={(e) => (e.currentTarget.style.background = colors.successHover)}
+          onMouseLeave={(e) => (e.currentTarget.style.background = colors.success)}
         >
           Sign Up
         </button>
 
-        <p style={{ textAlign: "center", marginTop: 16 }}>
+        <p style={footerText}>
           Already have an account?{" "}
           <Link
             to="/login"

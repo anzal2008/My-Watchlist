@@ -17,14 +17,26 @@ const palette = (theme) => ({
 export default function NavBar() {
   const { theme, toggleTheme } = useContext(ThemeContext);
   const colors = palette(theme);
-  const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState([]);
   const navigate = useNavigate();
 
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [isMobile, setIsMobile] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Detect mobile / small screens
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 640px)");
+    setIsMobile(media.matches);
+    const listener = () => setIsMobile(media.matches);
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
+  }, []);
+
+  // Fetch suggestions
   useEffect(() => {
     if (!query.trim()) return setSuggestions([]);
-
-    const timeout = setTimeout(async () => {
+    const t = setTimeout(async () => {
       try {
         const res = await fetch(
           `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(
@@ -35,22 +47,20 @@ export default function NavBar() {
         setSuggestions(
           (data.results || [])
             .filter((r) => r.media_type !== "person")
-            .sort((a, b) => b.vote_average - a.vote_average)
-            .slice(0, 7)
+            .slice(0, 6)
         );
       } catch (err) {
         console.error(err);
       }
-    }, 350);
-
-    return () => clearTimeout(timeout);
+    }, 300);
+    return () => clearTimeout(t);
   }, [query]);
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (!query.trim()) return;
-
     navigate(`/search?q=${encodeURIComponent(query)}`);
+    setQuery("");
     setSuggestions([]);
   };
 
@@ -61,48 +71,38 @@ export default function NavBar() {
     navigate(`/search?q=${encodeURIComponent(name)}`);
   };
 
-  const navStyle = {
-    margin: "12px",
-    padding: "10px 20px",
+  /* ---------- STYLES ---------- */
+  const iconBtn = {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    border: `1px solid ${colors.border}`,
     background: colors.bg,
     color: colors.text,
-    borderRadius: 16,
-    border: `1px solid ${colors.border}`,
-    boxShadow:
-      theme === "dark"
-        ? "0 2px 10px oklch(0% 0 0 / 0.45)"
-        : "0 2px 10px oklch(0% 0 0 / 0.12)",
-  };
-
-  const navInner = {
+    fontSize: 18,
+    cursor: "pointer",
     display: "flex",
-    alignItem: "center",
-    justifyContent: "space-between",
-    gap: "12px",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 4,
   };
 
   const inputStyle = {
     width: "100%",
     padding: "8px 10px",
-    borderRadius: 6,
+    borderRadius: 8,
+    border: `1px solid ${colors.border}`,
     background: colors.input,
     color: colors.text,
     outline: "none",
     fontSize: 14,
-    border:
-      theme === "dark"
-        ? "1px solid transparent"
-        : `1px solid ${colors.border}`,
-    boxShadow: 
-      theme === "dark"
-        ? `inset 0 -px 0 ${colors.primary}`
-        : "none",
   };
 
   const suggestionStyle = {
     position: "absolute",
     top: "110%",
-    width: "100%",
+    left: 0,
+    right: 0,
     background: colors.card,
     borderRadius: 6,
     boxShadow:
@@ -119,50 +119,77 @@ export default function NavBar() {
     borderBottom: `1px solid ${colors.border}`,
   };
 
-  const buttonStyle = {
-    padding: "6px 12px",
-    borderRadius: 8,
+  const menuDropdown = {
+    position: "absolute",
+    top: "calc(100% + 6px)",
+    right: 0,
+    background: colors.card,
     border: `1px solid ${colors.border}`,
-    background: colors.bg,
-    color: colors.text,
-    cursor: "pointer",
-    fontWeight: 600,
-    fontSize: "clamp(0.75rem,1.4vw, 0.85rem)",
-    whiteSpace: "nowrap",
+    borderRadius: 12,
+    padding: 12,
+    boxShadow:
+      theme === "dark"
+        ? "0 5px 20px oklch(0% 0 0 / 0.6)"
+        : "0 5px 20px oklch(0% 0 0 / 0.15)",
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+    zIndex: 20,
+    minWidth: 140,
   };
 
-  const iconButtonStyle = {
-    ...buttonStyle,
-    fontSize: 18,
-    padding: "6px 10px",
+  const menuItem = {
+    padding: "8px 12px",
+    borderRadius: 12,
+    background: colors.bg,
+    border: `1px solid ${colors.border}`,
+    cursor: "pointer",
+    textAlign: "center",
   };
 
   return (
-    <nav style={navStyle}>
-      <div style={navInner}>
-        <strong
+    <nav
+      style={{
+        margin: 12,
+        padding: "10px 14px",
+        borderRadius: 16,
+        background: colors.bg,
+        border: `1px solid ${colors.border}`,
+        position: "relative",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          flexWrap: "nowrap",
+          justifyContent: "space-between",
+        }}
+      >
+        {/* WATCHAPP SYMBOL */}
+        <div
           style={{ cursor: "pointer", flexShrink: 0 }}
           onClick={() => navigate("/")}
         >
-          🎬 WatchApp
-        </strong>
+          🎬
+        </div>
 
-        <form 
-          onSubmit={handleSearch} 
-          style={{ 
-            position: "relative", 
-            flex: "1 1 240px",
-            maxWidth: 360,
-            minWidth: 140,
-            }}
+        {/* SEARCH ALWAYS VISIBLE */}
+        <form
+          onSubmit={handleSearch}
+          style={{
+            flex: "1 1 150px",
+            position: "relative",
+            margin: "0 12px",
+          }}
         >
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search movies, TV, anime..."
+            placeholder="Search..."
             style={inputStyle}
           />
-
           {suggestions.length > 0 && (
             <div style={suggestionStyle}>
               {suggestions.map((s) => (
@@ -182,31 +209,46 @@ export default function NavBar() {
           )}
         </form>
 
-        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+        {/* HAMBURGER MENU ALWAYS RIGHT */}
+        <div style={{ position: "relative", flexShrink: 0 }}>
           <button
-            style={buttonStyle}
-            onMouseEnter={(e) => (e.currentTarget.style.background = colors.card)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = colors.bg)}
-            onClick={() => navigate("/bulk-add")}
+            style={iconBtn}
+            onClick={() => setMenuOpen((prev) => !prev)}
+            title="Menu"
           >
-            ➕ Bulk Add
+            ☰
           </button>
-          <button
-            style={buttonStyle}
-            onMouseEnter={(e) => (e.currentTarget.style.background = colors.card)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = colors.bg)}
-            onClick={() => navigate("/watched")}
-          >
-            ✔ Watched
-          </button>
-          <button
-            style={iconButtonStyle}
-            onClick={toggleTheme}
-            onMouseEnter={(e) => (e.currentTarget.style.background = colors.card)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = colors.bg)}
-          >
-            {theme === "dark" ? "☀" : "🌙"}
-          </button>
+          {menuOpen && (
+            <div style={menuDropdown}>
+              <div
+                style={menuItem}
+                onClick={() => {
+                  navigate("/bulk-add");
+                  setMenuOpen(false);
+                }}
+              >
+                ➕ Bulk Add
+              </div>
+              <div
+                style={menuItem}
+                onClick={() => {
+                  navigate("/watched");
+                  setMenuOpen(false);
+                }}
+              >
+                ✔ Watched
+              </div>
+              <div
+                style={menuItem}
+                onClick={() => {
+                  toggleTheme();
+                  setMenuOpen(false);
+                }}
+              >
+                {theme === "dark" ? "☀ Light Mode" : "🌙 Dark Mode"}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </nav>
